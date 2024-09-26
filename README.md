@@ -28,26 +28,6 @@ DB_NAME=webapp
 PORT=3000
 
 
-#Project structure:
-
-WEBAPP/
-│
-├── node_modules/
-├── src/
-│   ├── config/
-│   │   └── dbConfig.js
-│   ├── controllers/
-│   │   └── healthController.js
-│   ├── routes/
-|   |   └── healthRoutes.js
-│   └-─ app.js
-│
-├── .env
-├── .gitignore
-├── package-lock.json
-├── package.json
-└── README.md
-
 
 #Build and Deployment Instructions :
 
@@ -69,6 +49,7 @@ WEBAPP/
 
     -Fork the repository.
     -Work on feature branches and commit changes via pull requests.
-    -Do not commit node_modules or other unnecessary files; ensure a       proper .gitignore is in place.
+    -Do not commit node_modules or other unnecessary files; 
+    -ensure a proper .gitignore is in place.
 
 
