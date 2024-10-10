@@ -1,0 +1,71 @@
+name: Web App CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: rootpass
+          MYSQL_DATABASE: ${{ secrets.DB_NAME }}
+          MYSQL_USER: ${{ secrets.DB_USER }}
+          MYSQL_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+        ports:
+          - 3306:3306
+
+    steps:
+      # Step 1: Checkout code from the repository
+      - name: 'Checkout code'
+        uses: actions/checkout@v2
+
+      # Step 2: Set up Node.js environment
+      - name: 'Setup Node.js'
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+
+      # Step 3: Install MySQL client for interacting with the MySQL service
+      - name: 'Install MySQL Client'
+        run: sudo apt-get install mysql-client -y
+
+      # Step 4: Create MySQL database and user based on secrets
+      - name: 'Setup MySQL Database'
+        run: |
+          mysql -h 127.0.0.1 -u root -prootpass -e "CREATE DATABASE IF NOT EXISTS ${{ secrets.DB_NAME }};"
+          mysql -h 127.0.0.1 -u root -prootpass -e "CREATE USER IF NOT EXISTS '${{ secrets.DB_USER }}'@'localhost' IDENTIFIED BY '${{ secrets.DB_PASSWORD }}';"
+          mysql -h 127.0.0.1 -u root -prootpass -e "GRANT ALL PRIVILEGES ON ${{ secrets.DB_NAME }}.* TO '${{ secrets.DB_USER }}'@'localhost';"
+          mysql -h 127.0.0.1 -u root -prootpass -e "FLUSH PRIVILEGES;"
+
+      # Step 5: Install Node.js dependencies (including express)
+      - name: 'Install dependencies'
+        run: npm install
+
+      # Step 6: Set up .env file with GitHub Secrets for the environment variables
+      - name: 'Create .env file'
+        run: |
+          echo "PORT=3000" > .env
+          echo "DATABASE_NAME=${{ secrets.DB_NAME }}" >> .env
+          echo "DATABASE_USER=${{ secrets.DB_USER }}" >> .env
+          echo "DATABASE_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "DATABASE_HOST=${{ secrets.DB_HOST }}" >> .env
+          echo "DATABASE_DIALECT=${{ secrets.DB_DIALECT }}" >> .env
+          echo "NODE_ENV=${{ secrets.NODE_ENV }}" >> .env
+
+      # Step 7: Run the tests with Jest
+      - name: 'Run Tests'
+        run: npm test
+        env:
+          NODE_ENV: ${{ secrets.NODE_ENV }}  # Use secret for NODE_ENV
