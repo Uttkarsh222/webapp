@@ -19,7 +19,7 @@ jobs:
         sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
         sudo apt-get update && sudo apt-get install packer
 
-    - name: Create .env file at project root for Packer
+    - name: Create .env file at project root
       run: |
         echo "PORT=3000" > .env
         echo "DATABASE_NAME=${{ secrets.DB_NAME }}" >> .env
@@ -31,22 +31,22 @@ jobs:
       working-directory: ./
 
     - name: Initialize Packer
-      run: packer init ./node_app.pkr.hcl
-      working-directory: ./packer/templates
+      run: packer init ./packer/templates/node_app.pkr.hcl
+      working-directory: ./
 
     - name: Check Packer template formatting
       id: fmt
       run: |
-        packer fmt -check -diff ./node_app.pkr.hcl
+        packer fmt -check -diff ./packer/templates/node_app.pkr.hcl
       continue-on-error: true
-      working-directory: ./packer/templates
+      working-directory: ./
 
     - name: Fail if formatting needed
       if: steps.fmt.outcome == 'failure'
       run: |
         echo "Packer files need to be formatted. Please run 'packer fmt' locally."
         exit 1
-      working-directory: ./packer/templates
+      working-directory: ./
 
     - name: Validate Packer template
       run: |
@@ -56,5 +56,5 @@ jobs:
                         -var "instance_type=${{ secrets.INSTANCE_TYPE }}" \
                         -var "ami_name_prefix=${{ secrets.AMI_NAME_PREFIX }}" \
                         -var "source_ami=${{ secrets.SOURCE_AMI }}" \
-                        ./node_app.pkr.hcl
-      working-directory: ./packer/templates
+                        ./packer/templates/node_app.pkr.hcl
+      working-directory: ./
