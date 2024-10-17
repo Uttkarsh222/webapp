@@ -27,7 +27,7 @@ jobs:
     - name: Check Packer template formatting
       id: fmt
       run: |
-        packer fmt -check -diff ./node_app.pkr.hcl
+        packer fmt -check -diff ./packer/templates/node_app.pkr.hcl
       continue-on-error: true  
 
     - name: Fail if formatting needed
@@ -44,5 +44,4 @@ jobs:
                         -var "instance_type=${{ secrets.INSTANCE_TYPE }}" \
                         -var "ami_name_prefix=${{ secrets.AMI_NAME_PREFIX }}" \
                         -var "source_ami=${{ secrets.SOURCE_AMI }}" \
-                        ./node_app.pkr.hcl
-
+                        ./packer/templates/node_app.pkr.hcl
