@@ -1,9 +1,9 @@
 name: Packer AMI Build and Share
 
 on:
-  pull:
+  pull_request:
     branches:
-      - main
+      - main  # Trigger this workflow only after merging into the main branch
 
 jobs:
   build-and-share-ami:
@@ -46,7 +46,7 @@ jobs:
     - name: Install Node.js dependencies
       run: npm install
 
-  - name: Create .env file at project root
+    - name: Create .env file at project root
       run: |
         echo "PORT=3000" > .env
         echo "DATABASE_NAME=${{ secrets.DB_NAME }}" >> .env
@@ -75,12 +75,14 @@ jobs:
 
     - name: Initialize Packer
       run: packer init ./packer/templates
+      working-directory: ./
 
     - name: Build AMI using Packer
       run: |
         packer build -machine-readable ./packer/templates/node_app.pkr.hcl | tee build_output.txt
       env:
         PACKER_LOG: 1
+      working-directory: ./
 
     - name: Extract AMI ID
       id: extract_ami
