@@ -30,18 +30,6 @@ jobs:
         echo "NODE_ENV=${{ secrets.NODE_ENV }}" >> .env
       working-directory: ./
 
-    - name: Prepare files for Packer
-      run: |
-        # Copy the application source code, package.json, package-lock.json, and .env to packer/templates
-        mkdir -p ./packer/templates/src
-        cp -r ./src ./packer/templates/src/
-        cp ./package.json ./packer/templates/
-        cp ./package-lock.json ./packer/templates/
-        cp ./.env ./packer/templates/
-        # Copy the scripts into the correct location under packer/templates
-        cp -r ./packer/scripts ./packer/templates/
-      working-directory: ./
-
     - name: Initialize Packer
       run: packer init ./node_app.pkr.hcl
       working-directory: ./packer/templates
