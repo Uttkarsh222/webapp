@@ -28,7 +28,20 @@ jobs:
         echo "DATABASE_HOST=${{ secrets.DB_HOST }}" >> .env
         echo "DATABASE_DIALECT=${{ secrets.DB_DIALECT }}" >> .env
         echo "NODE_ENV=${{ secrets.NODE_ENV }}" >> .env
-      working-directory: ./packer/templates  # Create the .env file directly in the Packer templates directory
+      working-directory: ./  # Create the .env file at the project root
+
+    - name: Prepare files for Packer
+      run: |
+        # Copy the application source code, package.json, package-lock.json, and .env to packer/templates
+        mkdir -p ./packer/templates/src
+        cp -r ./src/* ./packer/templates/src/
+        cp ./package.json ./packer/templates/package.json
+        cp ./package-lock.json ./packer/templates/package-lock.json
+        cp ./.env ./packer/templates/.env
+        # Ensure scripts are in the correct location under packer/templates
+        mkdir -p ./packer/templates/scripts
+        cp -r ./packer/scripts/* ./packer/templates/scripts/
+      working-directory: ./
 
     - name: Initialize Packer
       run: packer init ./node_app.pkr.hcl
