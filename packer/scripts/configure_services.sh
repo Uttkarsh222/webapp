@@ -6,13 +6,17 @@ set -x
 if ! command -v node &> /dev/null; then
     echo "Node.js not found. Please install Node.js and try again."
     exit 1
+else
+    echo "Node.js found."
 fi
 
-# Check if MySQL is running (optional)
+# Check if MySQL is running
 if ! systemctl is-active --quiet mysql; then
     echo "MySQL service is not running. Starting MySQL..."
     sudo systemctl start mysql
     sudo systemctl enable mysql
+else
+    echo "MySQL service is already running."
 fi
 
 # Create the systemd service file for the Node.js app
@@ -24,7 +28,8 @@ After=network.target mysql.service
 
 [Service]
 ExecStart=/usr/bin/node /home/ubuntu/webapp/src/app.js
-Restart=always
+Restart=on-failure          # Use on-failure to avoid restarting when the app exits successfully
+RestartSec=5                # Restart after 5 seconds if it crashes
 User=csye6225
 Group=csye6225
 EnvironmentFile=/home/ubuntu/.env
@@ -51,12 +56,12 @@ sudo systemctl start webapp.service
 
 # Check the service status
 echo "Checking the service status..."
-sudo systemctl status webapp.service
-
-# Optional: Tail the logs for real-time feedback (uncomment if desired)
-# echo "Tailing logs..."
-# journalctl -u webapp.service -f
+sudo systemctl status webapp.service --no-pager
 
 # Check logs from the last 1 minute to see if there are any immediate issues
 echo "Checking logs from the last minute for errors or issues..."
-journalctl -u webapp.service --since "1 minute ago"
+sudo journalctl -u webapp.service --since "1 minute ago" --no-pager
+
+# Optional: Tail the logs for real-time feedback (uncomment if desired)
+# echo "Tailing logs..."
+# sudo journalctl -u webapp.service -f
