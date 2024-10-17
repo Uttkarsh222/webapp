@@ -48,4 +48,3 @@ echo "Listing files to verify correct copy and ownership..."
 ls -alh /home/ubuntu/webapp/
 
 echo "File listing complete. All operations performed successfully."
-
