@@ -1,0 +1,61 @@
+name: Packer CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  packer-validation:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Install Packer
+      run: |
+        curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+        sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+        sudo apt-get update && sudo apt-get install packer
+
+    - name: Create .env file at project root
+      run: |
+        echo "PORT=3000" > .env
+        echo "DATABASE_NAME=${{ secrets.DB_NAME }}" >> .env
+        echo "DATABASE_USER=${{ secrets.DB_USER }}" >> .env
+        echo "DATABASE_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+        echo "ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}" >> .env
+        echo "DATABASE_HOST=${{ secrets.DB_HOST }}" >> .env
+        echo "DATABASE_DIALECT=${{ secrets.DB_DIALECT }}" >> .env
+        echo "NODE_ENV=${{ secrets.NODE_ENV }}" >> .env
+      working-directory: ./
+
+    - name: Initialize Packer
+      run: packer init ./packer/templates/node_app.pkr.hcl
+      working-directory: ./
+
+    - name: Check Packer template formatting
+      id: fmt
+      run: |
+        packer fmt -check -diff ./packer/templates/node_app.pkr.hcl
+      continue-on-error: true
+      working-directory: ./
+
+    - name: Fail if formatting needed
+      if: steps.fmt.outcome == 'failure'
+      run: |
+        echo "Packer files need to be formatted. Please run 'packer fmt' locally."
+        exit 1
+      working-directory: ./
+
+    - name: Validate Packer template
+      run: |
+        packer validate -var "aws_access_key=${{ secrets.DEV_ACCESS_KEY }}" \
+                        -var "aws_secret_key=${{ secrets.DEV_SECRET_KEY }}" \
+                        -var "aws_region=${{ secrets.AWS_REGION }}" \
+                        -var "instance_type=${{ secrets.INSTANCE_TYPE }}" \
+                        -var "ami_name_prefix=${{ secrets.AMI_NAME_PREFIX }}" \
+                        -var "source_ami=${{ secrets.SOURCE_AMI }}" \
+                        ./packer/templates/node_app.pkr.hcl
+      working-directory: ./
