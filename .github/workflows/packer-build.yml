@@ -48,7 +48,7 @@ jobs:
 
     - name: Create .env file at project root
       run: |
-        echo "PORT=3000" > .env
+        echo "PORT=${{ secrets.PORT }}" >> .env
         echo "DATABASE_NAME=${{ secrets.DB_NAME }}" >> .env
         echo "DATABASE_USER=${{ secrets.DB_USER }}" >> .env
         echo "DATABASE_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
