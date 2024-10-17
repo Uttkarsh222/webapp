@@ -19,11 +19,16 @@ jobs:
         sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
         sudo apt-get update && sudo apt-get install packer
 
+    - name: Initialize Packer
+      run: |
+        cd ./packer/templates
+        packer init .
+
     - name: Check Packer template formatting
       id: fmt
       run: |
-        packer fmt -check -diff ./packer/templates/node_app.pkr.hcl
-      continue-on-error: true  # This allows capturing the output without failing the step
+        packer fmt -check -diff ./node_app.pkr.hcl
+      continue-on-error: true  
 
     - name: Fail if formatting needed
       if: steps.fmt.outcome == 'failure'
@@ -39,4 +44,5 @@ jobs:
                         -var "instance_type=${{ secrets.INSTANCE_TYPE }}" \
                         -var "ami_name_prefix=${{ secrets.AMI_NAME_PREFIX }}" \
                         -var "source_ami=${{ secrets.SOURCE_AMI }}" \
-                        ./packer/templates/node_app.pkr.hcl
+                        ./node_app.pkr.hcl
+
