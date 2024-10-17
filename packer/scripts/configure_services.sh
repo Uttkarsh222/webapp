@@ -24,7 +24,7 @@ After=network.target mysql.service
 
 [Service]
 ExecStart=/usr/bin/node /home/ubuntu/webapp/src/app.js
-Restart=on-failure
+Restart=always
 User=csye6225
 Group=csye6225
 EnvironmentFile=/home/ubuntu/.env
