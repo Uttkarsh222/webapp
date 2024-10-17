@@ -51,10 +51,12 @@ else
 fi
 
 echo "Creating MySQL database and user..."
-sudo mysql -e "CREATE USER IF NOT EXISTS '${DATABASE_USER}'@'localhost' IDENTIFIED BY '${DATABASE_PASSWORD}';"
-sudo mysql -e "CREATE DATABASE IF NOT EXISTS ${DATABASE_NAME};"
-sudo mysql -e "GRANT ALL PRIVILEGES ON ${DATABASE_NAME}.* TO '${DATABASE_USER}'@'localhost';"
-sudo mysql -e "FLUSH PRIVILEGES;"
+sudo mysql -u root <<EOF
+ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$DATABASE_PASSWORD';
+FLUSH PRIVILEGES;
+CREATE DATABASE IF NOT EXISTS $DATABASE_NAME;
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION;
+EOF
 
 echo "Verifying database creation..."
 sudo mysql -e "SHOW DATABASES;" | grep "${DATABASE_NAME}"
