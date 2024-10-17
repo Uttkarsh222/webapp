@@ -1,7 +1,7 @@
 name: Packer CI
 
 on:
-  pull_request:
+  push:
     branches:
       - main
 
@@ -19,7 +19,7 @@ jobs:
         sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
         sudo apt-get update && sudo apt-get install packer
 
-    - name: Create .env file at project root
+    - name: Create .env file at project root for Packer
       run: |
         echo "PORT=3000" > .env
         echo "DATABASE_NAME=${{ secrets.DB_NAME }}" >> .env
@@ -28,7 +28,7 @@ jobs:
         echo "DATABASE_HOST=${{ secrets.DB_HOST }}" >> .env
         echo "DATABASE_DIALECT=${{ secrets.DB_DIALECT }}" >> .env
         echo "NODE_ENV=${{ secrets.NODE_ENV }}" >> .env
-      working-directory: ./
+      working-directory: ./packer/templates  # Create the .env file directly in the Packer templates directory
 
     - name: Initialize Packer
       run: packer init ./node_app.pkr.hcl
