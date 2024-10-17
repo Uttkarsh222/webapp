@@ -36,13 +36,6 @@ variable "aws_secret_key" {
   sensitive = true
 }
 
-variable "DBROOT_USER" {
-  type = string
-}
-
-variable "ROOT_PASSWORD" {
-  type = string
-}
 
 
 # Define the source block for the custom AMI using amazon-ebs
