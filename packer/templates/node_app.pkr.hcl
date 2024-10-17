@@ -36,6 +36,15 @@ variable "aws_secret_key" {
   sensitive = true
 }
 
+variable "DBROOT_USER" {
+  type = string
+}
+
+variable "ROOT_PASSWORD" {
+  type = string
+}
+
+
 # Define the source block for the custom AMI using amazon-ebs
 source "amazon-ebs" "ubuntu" {
   ami_name      = "${replace(var.ami_name_prefix, "/[^a-zA-Z0-9-]/", "")}-${formatdate("YYYYMMDDHHmmss", timestamp())}"
@@ -85,6 +94,15 @@ build {
   }
 
   provisioner "shell" {
+
+    environment_vars = [
+      "DEBIAN_FRONTEND=noninteractive",
+      "CHECKPOINT_DISABLE=1",
+      "ROOT_PASSWORD=${var.ROOT_PASSWORD}",
+      "DBROOT_USER=${var.DBROOT_USER}"
+      
+    ]
+
     script = "./packer/scripts/configure_services.sh"
   }
 }
