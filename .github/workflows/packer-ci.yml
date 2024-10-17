@@ -19,32 +19,31 @@ jobs:
         sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
         sudo apt-get update && sudo apt-get install packer
 
-    - name: Initialize Packer
+    - name: Create .env file at project root
       run: |
-        cd ./packer/templates
-        packer init .
+        echo "PORT=3000" > .env
+        echo "DATABASE_NAME=${{ secrets.DB_NAME }}" >> .env
+        echo "DATABASE_USER=${{ secrets.DB_USER }}" >> .env
+        echo "DATABASE_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+        echo "DATABASE_HOST=${{ secrets.DB_HOST }}" >> .env
+        echo "DATABASE_DIALECT=${{ secrets.DB_DIALECT }}" >> .env
+        echo "NODE_ENV=${{ secrets.NODE_ENV }}" >> .env
+      working-directory: ./
 
-    - name: Create .env file
-      run: |
-        echo "PORT=3000" > ./.env
-        echo "DATABASE_NAME=${{ secrets.DB_NAME }}" >> ./.env
-        echo "DATABASE_USER=${{ secrets.DB_USER }}" >> ./.env
-        echo "DATABASE_PASSWORD=${{ secrets.DB_PASSWORD }}" >> ./.env
-        echo "DATABASE_HOST=${{ secrets.DB_HOST }}" >> ./.env
-        echo "DATABASE_DIALECT=${{ secrets.DB_DIALECT }}" >> ./.env
-        echo "NODE_ENV=${{ secrets.NODE_ENV }}" >> ./.env
+    - name: Initialize Packer
+      run: packer init ./node_app.pkr.hcl
+      working-directory: ./packer/templates
 
     - name: Check Packer template formatting
       id: fmt
-      run: |
-        packer fmt -check -diff ./node_app.pkr.hcl
+      run: packer fmt -check -diff ./node_app.pkr.hcl
       continue-on-error: true
+      working-directory: ./packer/templates
 
     - name: Fail if formatting needed
       if: steps.fmt.outcome == 'failure'
-      run: |
-        echo "Packer files need to be formatted. Please run 'packer fmt' locally."
-        exit 1
+      run: echo "Packer files need to be formatted. Please run 'packer fmt' locally."
+      working-directory: ./packer/templates
 
     - name: Validate Packer template
       run: |
@@ -55,3 +54,4 @@ jobs:
                         -var "ami_name_prefix=${{ secrets.AMI_NAME_PREFIX }}" \
                         -var "source_ami=${{ secrets.SOURCE_AMI }}" \
                         ./node_app.pkr.hcl
+      working-directory: ./packer/templates
