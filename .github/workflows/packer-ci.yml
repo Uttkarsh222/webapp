@@ -28,19 +28,18 @@ jobs:
         echo "DATABASE_HOST=${{ secrets.DB_HOST }}" >> .env
         echo "DATABASE_DIALECT=${{ secrets.DB_DIALECT }}" >> .env
         echo "NODE_ENV=${{ secrets.NODE_ENV }}" >> .env
-      working-directory: ./  # Create the .env file at the project root
+      working-directory: ./
 
     - name: Prepare files for Packer
       run: |
         # Copy the application source code, package.json, package-lock.json, and .env to packer/templates
         mkdir -p ./packer/templates/src
-        cp -r ./src/* ./packer/templates/src/
-        cp ./package.json ./packer/templates/package.json
-        cp ./package-lock.json ./packer/templates/package-lock.json
-        cp ./.env ./packer/templates/.env
-        # Ensure scripts are in the correct location under packer/templates
-        mkdir -p ./packer/templates/scripts
-        cp -r ./packer/scripts/* ./packer/templates/scripts/
+        cp -r ./src ./packer/templates/src/
+        cp ./package.json ./packer/templates/
+        cp ./package-lock.json ./packer/templates/
+        cp ./.env ./packer/templates/
+        # Copy the scripts into the correct location under packer/templates
+        cp -r ./packer/scripts ./packer/templates/
       working-directory: ./
 
     - name: Initialize Packer
@@ -49,13 +48,16 @@ jobs:
 
     - name: Check Packer template formatting
       id: fmt
-      run: packer fmt -check -diff ./node_app.pkr.hcl
+      run: |
+        packer fmt -check -diff ./node_app.pkr.hcl
       continue-on-error: true
       working-directory: ./packer/templates
 
     - name: Fail if formatting needed
       if: steps.fmt.outcome == 'failure'
-      run: echo "Packer files need to be formatted. Please run 'packer fmt' locally."
+      run: |
+        echo "Packer files need to be formatted. Please run 'packer fmt' locally."
+        exit 1
       working-directory: ./packer/templates
 
     - name: Validate Packer template
