@@ -100,7 +100,7 @@ build {
       "CHECKPOINT_DISABLE=1",
       "ROOT_PASSWORD=${var.ROOT_PASSWORD}",
       "DBROOT_USER=${var.DBROOT_USER}"
-      
+
     ]
 
     script = "./packer/scripts/configure_services.sh"
