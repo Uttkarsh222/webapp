@@ -20,7 +20,7 @@ echo "Creating a systemd service file for the Node.js app..."
 cat <<EOF | sudo tee /etc/systemd/system/webapp.service > /dev/null
 [Unit]
 Description=Node.js App
-After=network.target
+After=network.target mysql.service
 
 [Service]
 ExecStart=/usr/bin/node /home/ubuntu/webapp/src/app.js
@@ -29,8 +29,8 @@ User=csye6225
 Group=csye6225
 EnvironmentFile=/home/ubuntu/.env
 WorkingDirectory=/home/ubuntu/webapp
-StandardOutput=syslog
-StandardError=syslog
+StandardOutput=journal
+StandardError=journal
 SyslogIdentifier=webapp
 
 [Install]
