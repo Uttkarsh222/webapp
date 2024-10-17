@@ -13,10 +13,11 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Setup Packer
-      uses: hashicorp/setup-packer@v1
-      with:
-        packer-version: '1.11.2'
+    - name: Install Packer
+      run: |
+        curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+        sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+        sudo apt-get update && sudo apt-get install packer
 
     - name: Check Packer template formatting
       id: fmt
