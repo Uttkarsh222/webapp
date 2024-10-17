@@ -24,11 +24,21 @@ jobs:
         cd ./packer/templates
         packer init .
 
+    - name: Create .env file
+      run: |
+        echo "PORT=3000" > ./.env
+        echo "DATABASE_NAME=${{ secrets.DB_NAME }}" >> ./.env
+        echo "DATABASE_USER=${{ secrets.DB_USER }}" >> ./.env
+        echo "DATABASE_PASSWORD=${{ secrets.DB_PASSWORD }}" >> ./.env
+        echo "DATABASE_HOST=${{ secrets.DB_HOST }}" >> ./.env
+        echo "DATABASE_DIALECT=${{ secrets.DB_DIALECT }}" >> ./.env
+        echo "NODE_ENV=${{ secrets.NODE_ENV }}" >> ./.env
+
     - name: Check Packer template formatting
       id: fmt
       run: |
-        packer fmt -check -diff ./packer/templates/node_app.pkr.hcl
-      continue-on-error: true  
+        packer fmt -check -diff ./node_app.pkr.hcl
+      continue-on-error: true
 
     - name: Fail if formatting needed
       if: steps.fmt.outcome == 'failure'
@@ -44,4 +54,4 @@ jobs:
                         -var "instance_type=${{ secrets.INSTANCE_TYPE }}" \
                         -var "ami_name_prefix=${{ secrets.AMI_NAME_PREFIX }}" \
                         -var "source_ami=${{ secrets.SOURCE_AMI }}" \
-                        ./packer/templates/node_app.pkr.hcl
+                        ./node_app.pkr.hcl

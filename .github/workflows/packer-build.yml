@@ -48,13 +48,13 @@ jobs:
 
     - name: Create .env file
       run: |
-        echo "PORT=3000" > .env
-        echo "DATABASE_NAME=${{ secrets.DB_NAME }}" >> .env
-        echo "DATABASE_USER=${{ secrets.DB_USER }}" >> .env
-        echo "DATABASE_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
-        echo "DATABASE_HOST=localhost" >> .env
-        echo "DATABASE_DIALECT=mysql" >> .env
-        echo "NODE_ENV=test" >> .env
+        echo "PORT=3000" > ./.env
+        echo "DATABASE_NAME=${{ secrets.DB_NAME }}" >> ./.env
+        echo "DATABASE_USER=${{ secrets.DB_USER }}" >> ./.env
+        echo "DATABASE_PASSWORD=${{ secrets.DB_PASSWORD }}" >> ./.env
+        echo "DATABASE_HOST=${{ secrets.DB_HOST }}" >> ./.env
+        echo "DATABASE_DIALECT=${{ secrets.DB_DIALECT }}" >> ./.env
+        echo "NODE_ENV=${{ secrets.NODE_ENV }}" >> ./.env
 
     - name: Run Tests
       run: npm test
