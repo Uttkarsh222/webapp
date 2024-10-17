@@ -1,0 +1,41 @@
+name: Packer CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  packer-validation:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Packer
+      uses: hashicorp/setup-packer@v1
+      with:
+        packer-version: '1.11.2'
+
+    - name: Check Packer template formatting
+      id: fmt
+      run: |
+        packer fmt -check -diff ./packer/templates/node_app.pkr.hcl
+      continue-on-error: true  # This allows capturing the output without failing the step
+
+    - name: Fail if formatting needed
+      if: steps.fmt.outcome == 'failure'
+      run: |
+        echo "Packer files need to be formatted. Please run 'packer fmt' locally."
+        exit 1
+
+    - name: Validate Packer template
+      run: |
+        packer validate -var "aws_access_key=${{ secrets.DEV_ACCESS_KEY }}" \
+                        -var "aws_secret_key=${{ secrets.DEV_SECRET_KEY }}" \
+                        -var "aws_region=${{ secrets.AWS_REGION }}" \
+                        -var "instance_type=${{ secrets.INSTANCE_TYPE }}" \
+                        -var "ami_name_prefix=${{ secrets.AMI_NAME_PREFIX }}" \
+                        -var "source_ami=${{ secrets.SOURCE_AMI }}" \
+                        ./packer/templates/node_app.pkr.hcl
