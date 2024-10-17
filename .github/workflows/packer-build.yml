@@ -1,9 +1,9 @@
 name: Packer AMI Build and Share
 
 on:
-  pull_request:
+  push:
     branches:
-      - main  # Trigger this workflow only after merging into the main branch
+      - main  # Trigger only after merging into the main branch
 
 jobs:
   build-and-share-ami:
@@ -84,14 +84,17 @@ jobs:
         PACKER_LOG: 1
       working-directory: ./
 
+    - name: Debug build_output.txt
+      run: cat build_output.txt
+
     - name: Extract AMI ID
       id: extract_ami
       run: |
         AMI_ID=$(grep 'artifact,0,id' build_output.txt | cut -d, -f6 | cut -d: -f2)
-        echo "::set-output name=ami_id::$AMI_ID"
+        echo "AMI_ID=$AMI_ID" >> $GITHUB_ENV
 
     - name: Share AMI with DEMO Account
       run: |
-        aws ec2 modify-image-attribute --image-id ${{ steps.extract_ami.outputs.ami_id }} --launch-permission "Add=[{UserId=DEMO_ACCOUNT_ID}]"
+        aws ec2 modify-image-attribute --image-id ${{ env.AMI_ID }} --launch-permission "Add=[{UserId=DEMO_ACCOUNT_ID}]"
       env:
         AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
