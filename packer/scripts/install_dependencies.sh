@@ -26,13 +26,7 @@ echo "Installing MySQL Server..."
 sudo apt-get install -y mysql-server
 
 echo "Running MySQL secure installation..."
-sudo mysql_secure_installation <<EOF
-n
-y
-y
-y
-y
-EOF
+
 
 echo "Starting and enabling MySQL service..."
 sudo systemctl start mysql
