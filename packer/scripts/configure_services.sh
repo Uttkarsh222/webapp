@@ -11,13 +11,13 @@ else
 fi
 
 
-if ! systemctl is-active --quiet mysql; then
-    echo "MySQL service is not running. Starting MySQL..."
-    sudo systemctl start mysql
-    sudo systemctl enable mysql
-else
-    echo "MySQL service is already running."
-fi
+# if ! systemctl is-active --quiet mysql; then
+#     echo "MySQL service is not running. Starting MySQL..."
+#     sudo systemctl start mysql
+#     sudo systemctl enable mysql
+# else
+#     echo "MySQL service is already running."
+# fi
 
 
 echo "Creating a systemd service file for the Node.js app..."
@@ -28,11 +28,11 @@ After=network.target mysql.service
 
 [Service]
 ExecStart=/usr/bin/node /home/ubuntu/webapp/src/app.js
-Restart=on-failure          
+Restart=always          
 RestartSec=5               
 User=csye6225
 Group=csye6225
-EnvironmentFile=/home/ubuntu/.env
+EnvironmentFile=/home/ubuntu/webapp/.env
 WorkingDirectory=/home/ubuntu/webapp
 StandardOutput=journal
 StandardError=journal
