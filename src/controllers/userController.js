@@ -15,17 +15,20 @@ exports.createUser = async (req, res) => {
 
         // Check for empty fields
         if (!firstName || !lastName || !password) {
+            console.log('Missing fields in request');
             return res.status(400).send();
         }
 
         // Validate email format
         if (!isValidEmail(email)) {
+            console.log('Invalid email format:', email);
             return res.status(400).send();
         }
 
         // Check if user already exists
         const existingUser = await User.findOne({ where: { email } });
         if (existingUser) {
+            console.log('User already exists with email:', email);
             return res.status(400).send();
         }
 
@@ -42,6 +45,8 @@ exports.createUser = async (req, res) => {
             accountUpdated: new Date(),
         });
 
+        console.log('New user created:', newUser.id);
+
         // Return user details with ID and without password
         res.status(201).json({
             id: newUser.id, 
@@ -52,7 +57,7 @@ exports.createUser = async (req, res) => {
             account_updated: newUser.accountUpdated,
         });
     } catch (error) {
-        console.error(error);
+        console.error('Error in createUser:', error);
         res.status(500).send();
     }
 };
@@ -61,12 +66,14 @@ exports.createUser = async (req, res) => {
 
 
 exports.getUser = async (req, res) => {
+    console.log('Fetching user details...');
     try {
         const userId = req.user.id; // Assuming user ID is retrieved from authentication middleware
-
+        console.log('User ID:', userId);
         // Find the user by ID
         const user = await User.findByPk(userId);
         if (!user) {
+            console.log('User not found with ID:', userId);
             return res.status(404).send(); // User not found
         }
 
@@ -80,7 +87,7 @@ exports.getUser = async (req, res) => {
             account_updated: user.accountUpdated,
         });
     } catch (error) {
-        console.error(error);
+        console.error('Error in getUser:', error);
         res.status(500).send();
     }
 };
@@ -88,23 +95,28 @@ exports.getUser = async (req, res) => {
 
 
 exports.updateUser = async (req, res) => {
+    console.log('Updating user details...');
     try {
         const userId = req.user.id; // Get user ID from the request
         const { firstName, lastName, password, email } = req.body; // Extract first name, last name, password, and email
 
+        console.log('Request for updating user ID:', userId);
         // Find the user in the database
         const user = await User.findByPk(userId);
         if (!user) {
+            console.log('User not found with ID:', userId);
             return res.status(404).send(); // User not found
         }
 
         // Prevent updating account_created and account_updated
         if (req.body.accountCreated || req.body.accountUpdated) {
+            console.log('Attempt to update account creation or updated dates');
             return res.status(400).send();
         }
 
         // Prevent email updates if the email is different from the current one
         if (email && email !== user.email) {
+            console.log('Attempt to change email denied');
             return res.status(400).send();
         }
 
@@ -120,10 +132,10 @@ exports.updateUser = async (req, res) => {
         user.accountUpdated = new Date(); // Update the accountUpdated field
 
         await user.save(); // Save the updated user details
-
+        console.log('User updated successfully:', userId);
         res.status(204).send(); // No content response
     } catch (error) {
-        console.error(error);
+        console.error('Error in updateUser:', error);
         res.status(500).send(); // Internal server error
     }
 };

@@ -1,6 +1,7 @@
 const sequelize = require('../config/dbConfig');
 
 const healthCheck = async (req, res) => {
+    console.log('Initiating health check...');
 
     // Check for any query parameters, body content, or content-length header
     if (Object.keys(req.query).length > 0 || 
@@ -16,6 +17,7 @@ const healthCheck = async (req, res) => {
 
     try {
         await sequelize.authenticate();
+        console.log('Database connection successful');
         res.set({
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache',
