@@ -53,6 +53,9 @@ jobs:
       - name: 'Install dependencies'
         run: npm install
 
+      - name: Create logs directory
+        run: mkdir -p src/logs
+
       # Step 6: Set up .env file with GitHub Secrets for the environment variables
       - name: 'Create .env file'
         run: |
