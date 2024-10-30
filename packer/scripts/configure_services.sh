@@ -10,6 +10,7 @@ NODE_PATH="/usr/bin/node"
 SERVICE_FILE="/etc/systemd/system/webapp.service"
 ENV_FILE="/home/ubuntu/webapp/.env"
 CLOUDWATCH_CONFIG="/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json"
+CLOUDWATCH_SERVICE_FILE="/etc/systemd/system/amazon-cloudwatch-agent.service"
 
 # Check if Node.js is installed
 if ! command -v node &> /dev/null; then
@@ -63,6 +64,25 @@ sudo tee "$CLOUDWATCH_CONFIG" > /dev/null <<'CLOUDWATCH_EOF'
   }
 }
 CLOUDWATCH_EOF
+
+# Create CloudWatch Agent systemd service file
+echo "Creating CloudWatch Agent systemd service file..."
+sudo tee "$CLOUDWATCH_SERVICE_FILE" > /dev/null <<EOF
+[Unit]
+Description=Amazon CloudWatch Agent
+After=network.target
+
+[Service]
+ExecStart=/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:$CLOUDWATCH_CONFIG -s
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Reload systemd to recognize the new CloudWatch service file
+echo "Reloading systemd to recognize the new CloudWatch Agent service file..."
+sudo systemctl daemon-reload
 
 # Enable and start the CloudWatch Agent as a systemd service
 echo "Enabling and starting the CloudWatch Agent..."
