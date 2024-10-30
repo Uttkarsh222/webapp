@@ -20,13 +20,13 @@ const authenticate = (req, res, next) => {
         .then((user) => {
             if (!user) {
                 console.log(`No user found with email: ${email}`);
-                return res.status(400).send();
+                return res.status(401).send();
             }
             bcrypt.compare(password, user.password)
                 .then((isMatch) => {
                     if (!isMatch) {
                         console.log('Password does not match for user:', email);
-                        return res.status(400).send();
+                        return res.status(401).send();
                     }
                     console.log('User authenticated successfully:', email);
                     req.user = user;

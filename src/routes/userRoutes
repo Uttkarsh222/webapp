@@ -7,6 +7,7 @@ const router = express.Router();
 // Public route for user creation (no authentication required)
 router.post('/user', userController.createUser);
 
+
 // Middleware to catch unsupported methods on /user/self
 router.use('/user/self', (req, res, next) => {
 
