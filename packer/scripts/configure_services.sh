@@ -20,8 +20,10 @@ else
     echo "Node.js found."
 fi
 
-# Create the logs directory (with parent directories if needed)
-mkdir -p "$LOG_DIR"
+# Create the logs directory (with parent directories if needed) and set permissions
+echo "Creating log directory..."
+sudo mkdir -p "$LOG_DIR"
+sudo chown -R ubuntu:ubuntu "$LOG_DIR"
 
 # Install CloudWatch Agent
 echo "Installing CloudWatch Agent..."
@@ -30,6 +32,11 @@ sudo apt-get update -y
 # Add the Amazon CloudWatch repository and install the agent
 sudo wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
 sudo dpkg -i amazon-cloudwatch-agent.deb
+
+# Create CloudWatch Agent configuration file directory if missing
+echo "Ensuring CloudWatch Agent configuration directory exists..."
+sudo mkdir -p /opt/aws/amazon-cloudwatch-agent/etc/
+sudo chown -R ubuntu:ubuntu /opt/aws/amazon-cloudwatch-agent/etc/
 
 # Create CloudWatch Agent configuration file for logs and metrics
 echo "Creating CloudWatch Agent configuration..."
@@ -65,6 +72,14 @@ sudo tee "$CLOUDWATCH_CONFIG" > /dev/null <<'CLOUDWATCH_EOF'
 }
 CLOUDWATCH_EOF
 
+# Validate CloudWatch Agent configuration
+echo "Validating CloudWatch Agent configuration..."
+sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a validate-config -c file:"$CLOUDWATCH_CONFIG"
+
+# Output success message
+echo "Setup script completed successfully."
+
+
 # Create CloudWatch Agent systemd service file
 echo "Creating CloudWatch Agent systemd service file..."
 sudo tee "$CLOUDWATCH_SERVICE_FILE" > /dev/null <<EOF
@@ -80,35 +95,21 @@ Restart=on-failure
 WantedBy=multi-user.target
 EOF
 
-# Reload systemd to recognize the new CloudWatch service file
-echo "Reloading systemd to recognize the new CloudWatch Agent service file..."
-sudo systemctl daemon-reload
-
-# Enable and start the CloudWatch Agent as a systemd service
-echo "Enabling and starting the CloudWatch Agent..."
-sudo systemctl enable amazon-cloudwatch-agent
-sudo systemctl start amazon-cloudwatch-agent
-
-# Start CloudWatch Agent with the custom configuration
-echo "Starting CloudWatch Agent with custom configuration..."
-sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
-  -a fetch-config -m ec2 \
-  -c file:"$CLOUDWATCH_CONFIG" -s
 
 # Create a systemd service file for the Node.js app
 echo "Creating a systemd service file for the Node.js app..."
-sudo tee "$SERVICE_FILE" > /dev/null <<EOF
+cat <<EOF | sudo tee /etc/systemd/system/webapp.service > /dev/null
 [Unit]
 Description=Node.js App
 After=network.target mysql.service
 
 [Service]
-ExecStart=$NODE_PATH /home/ubuntu/webapp/src/app.js
-Restart=always
-RestartSec=5
+ExecStart=/usr/bin/node /home/ubuntu/webapp/src/app.js
+Restart=always          
+RestartSec=5               
 User=csye6225
 Group=csye6225
-EnvironmentFile=$ENV_FILE
+EnvironmentFile=/home/ubuntu/webapp/.env
 WorkingDirectory=/home/ubuntu/webapp
 StandardOutput=journal
 StandardError=journal
@@ -118,9 +119,10 @@ SyslogIdentifier=webapp
 WantedBy=multi-user.target
 EOF
 
-# Reload systemd to recognize the new service file
-echo "Reloading systemd to recognize the new service file..."
+# Reload systemd to recognize the new CloudWatch service file
+echo "Reloading systemd to recognize the new CloudWatch Agent service file..."
 sudo systemctl daemon-reload
+
 
 # Enable and start the webapp service
 echo "Enabling the webapp service to start on boot..."
@@ -132,6 +134,17 @@ sudo systemctl start webapp.service
 # Check the service status
 echo "Checking the service status..."
 sudo systemctl status webapp.service --no-pager
+
+# Enable and start the CloudWatch Agent as a systemd service
+echo "Enabling and starting the CloudWatch Agent..."
+sudo systemctl enable amazon-cloudwatch-agent
+sudo systemctl start amazon-cloudwatch-agent
+
+# Start CloudWatch Agent with the custom configuration
+echo "Starting CloudWatch Agent with custom configuration..."
+sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+  -a fetch-config -m ec2 \
+  -c file:"$CLOUDWATCH_CONFIG" -s
 
 # Check logs from the last minute for errors or issues
 echo "Checking logs from the last minute for errors or issues..."
