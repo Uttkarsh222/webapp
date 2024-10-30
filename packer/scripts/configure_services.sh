@@ -72,12 +72,6 @@ sudo tee "$CLOUDWATCH_CONFIG" > /dev/null <<'CLOUDWATCH_EOF'
 }
 CLOUDWATCH_EOF
 
-# Validate CloudWatch Agent configuration
-echo "Validating CloudWatch Agent configuration..."
-sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a validate-config -c file:"$CLOUDWATCH_CONFIG"
-
-# Output success message
-echo "Setup script completed successfully."
 
 
 # Create CloudWatch Agent systemd service file
