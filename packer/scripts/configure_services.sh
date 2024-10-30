@@ -43,33 +43,34 @@ echo "Creating CloudWatch Agent configuration..."
 sudo bash -c 'cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json' <<'CLOUDWATCH_EOF'
 {
   "agent": {
-    "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
+      "metrics_collection_interval": 10,
+      "logfile": "/var/logs/amazon-cloudwatch-agent.log"
   },
   "logs": {
-    "logs_collected": {
-      "files": {
-        "collect_list": [
-          {
-            "file_path": "/home/ubuntu/webapp/src/logs/app.log",
-            "log_group_name": "myapp-logs",
-            "log_stream_name": "webapp-log-stream",
-            "timezone": "Local"
+      "logs_collected": {
+          "files": {
+              "collect_list": [
+                  {
+                      "file_path": "/home/ubuntu/webapp/src/logs/app.log",
+                      "log_group_name": "csye6225",
+                      "log_stream_name": "webapp"
+                  }
+              ]
           }
-        ]
-      }
-    }
+      },
+      "log_stream_name": "cloudwatch_log_stream"
   },
-  "metrics": {
-    "namespace": "MyAppMetrics",
-    "metrics_collected": {
-      "statsd": {
-        "service_address": ":8125",
-        "metrics_collection_interval": 60,
-        "metrics_aggregation_interval": 300
-      }
+  "metrics":{
+    "metrics_collected":{
+       "statsd":{
+          "service_address":":8125",
+          "metrics_collection_interval":15,
+          "metrics_aggregation_interval":300
+       }
     }
-  }
+ }
 }
+
 CLOUDWATCH_EOF
 
 # Verify if the configuration file was created successfully
@@ -80,20 +81,6 @@ else
     exit 1
 fi
 
-# Step 6: Create CloudWatch Agent systemd service file
-echo "Creating CloudWatch Agent systemd service file..."
-sudo bash -c 'cat > /etc/systemd/system/amazon-cloudwatch-agent.service' <<EOF
-[Unit]
-Description=Amazon CloudWatch Agent
-After=network.target
-
-[Service]
-ExecStart=/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:$CLOUDWATCH_CONFIG -s
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-EOF
 
 # Step 7: Create a systemd service file for the Node.js app
 echo "Creating a systemd service file for the Node.js app..."
@@ -130,8 +117,8 @@ sudo systemctl start webapp.service
 
 # Step 10: Enable and start the CloudWatch Agent as a systemd service
 echo "Enabling and starting the CloudWatch Agent..."
-sudo systemctl enable amazon-cloudwatch-agent.service
-sudo systemctl start amazon-cloudwatch-agent.service
+sudo systemctl enable amazon-cloudwatch-agent
+sudo systemctl start amazon-cloudwatch-agent
 
 # Step 11: Start CloudWatch Agent with the custom configuration
 echo "Starting CloudWatch Agent with custom configuration..."
@@ -143,4 +130,4 @@ sudo journalctl -u webapp.service --since "1 minute ago" --no-pager
 
 # Step 13: Check CloudWatch Agent service logs from the last minute for errors or issues
 echo "Checking CloudWatch Agent service logs from the last minute for errors or issues..."
-sudo journalctl -u amazon-cloudwatch-agent.service --since "1 minute ago" --no-pager
+sudo journalctl -u amazon-cloudwatch-agent --since "1 minute ago" --no-pager
