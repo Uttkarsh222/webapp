@@ -29,6 +29,9 @@ jobs:
         echo "DATABASE_HOST=${{ secrets.DB_HOST }}" >> .env
         echo "DATABASE_DIALECT=${{ secrets.DB_DIALECT }}" >> .env
         echo "NODE_ENV=${{ secrets.NODE_ENV }}" >> .env
+        echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
+        echo "S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}" >> .env
+        echo "STATSD_PORT=${{ secrets.STATSD_PORT }}" >> .env
       working-directory: ./
 
     - name: Initialize Packer

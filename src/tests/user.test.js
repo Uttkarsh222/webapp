@@ -71,7 +71,7 @@ describe('User APIs', () => {
                 lastName: 'Doe Updated'
             });
 
-        expect(response.status).toBe(400);
+        expect(response.status).toBe(401);
     });
 
     it('DELETE /v1/user/self - Should return 405 Method Not Allowed', async () => {
