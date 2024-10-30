@@ -25,7 +25,10 @@ mkdir -p "$LOG_DIR"
 # Install CloudWatch Agent
 echo "Installing CloudWatch Agent..."
 sudo apt-get update -y
-sudo apt-get install -y amazon-cloudwatch-agent
+
+# Add the Amazon CloudWatch repository and install the agent
+sudo wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+sudo dpkg -i amazon-cloudwatch-agent.deb
 
 # Create CloudWatch Agent configuration file for logs and metrics
 echo "Creating CloudWatch Agent configuration..."
