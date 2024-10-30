@@ -24,8 +24,8 @@ mkdir -p "$LOG_DIR"
 
 # Install CloudWatch Agent
 echo "Installing CloudWatch Agent..."
-sudo yum update -y
-sudo yum install -y amazon-cloudwatch-agent
+sudo apt-get update -y
+sudo apt-get install -y amazon-cloudwatch-agent
 
 # Create CloudWatch Agent configuration file for logs and metrics
 echo "Creating CloudWatch Agent configuration..."
