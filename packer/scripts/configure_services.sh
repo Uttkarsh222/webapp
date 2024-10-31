@@ -111,15 +111,6 @@ sudo systemctl enable webapp.service
 echo "Starting the webapp service..."
 sudo systemctl start webapp.service
 
-# # Step 10: Enable and start the CloudWatch Agent as a systemd service
-# echo "Enabling and starting the CloudWatch Agent..."
-# sudo systemctl enable amazon-cloudwatch-agent
-# sudo systemctl start amazon-cloudwatch-agent
-
-# # Step 11: Start CloudWatch Agent with the custom configuration
-# echo "Starting CloudWatch Agent with custom configuration..."
-# sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:"$CLOUDWATCH_CONFIG" -s
-
 # Step 12: Check webapp service logs from the last minute for errors or issues
 echo "Checking webapp service logs from the last minute for errors or issues..."
 sudo journalctl -u webapp.service --since "1 minute ago" --no-pager
