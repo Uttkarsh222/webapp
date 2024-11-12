@@ -24,7 +24,8 @@ describe('User APIs', () => {
             id: expect.any(String), // Expecting the id to be a string (UUID)
             email: 'jane.doe@example.com',
             first_name: 'Jane',
-            last_name: 'Doe'
+            last_name: 'Doe',
+            verified: false, // Verify the default value of 'verified' field
         }));
     });
 
@@ -40,7 +41,8 @@ describe('User APIs', () => {
             id: expect.any(String), // Expecting the id to be a string (UUID)
             email: 'jane.doe@example.com',
             first_name: 'Jane',
-            last_name: 'Doe'
+            last_name: 'Doe',
+            verified: false, // Ensure the 'verified' field is returned
         }));
     });
 
