@@ -69,6 +69,8 @@ jobs:
           echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
           echo "S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}" >> .env
           echo "STATSD_PORT=${{ secrets.STATSD_PORT }}" >> .env
+          echo "SNS_TOPIC_ARN=${{ secrets.SNS_TOPIC_ARN }}" >> .env
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
 
       # Step 7: Run the tests with Jest
       - name: 'Run Tests'
