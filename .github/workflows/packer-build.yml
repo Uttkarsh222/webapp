@@ -114,7 +114,7 @@ jobs:
       env:
         AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
 
-    # Part 3: Refresh Auto Scaling Group in Demo Account
+ # Part 3: Refresh Auto Scaling Group in Demo Account
     - name: Setup AWS CLI for Demo
       uses: aws-actions/configure-aws-credentials@v1
       with:
@@ -126,7 +126,6 @@ jobs:
       run: |
         aws ec2 create-launch-template-version \
           --launch-template-id ${{ secrets.LAUNCH_TEMPLATE_ID }} \
-          --source-version 1 \
           --version-description "New version with updated AMI" \
           --launch-template-data "{\"ImageId\":\"${{ env.AMI_ID }}\"}"
 
