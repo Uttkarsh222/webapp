@@ -1,4 +1,4 @@
-name: Packer AMI Build and Deploy
+name: Packer AMI Build and Share
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main  # Trigger only after merging into the main branch
 
 jobs:
-  build-and-deploy-ami:
+  build-and-share-ami:
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -36,15 +36,6 @@ jobs:
     - name: Install MySQL Client
       run: sudo apt-get install mysql-client -y
 
-    - name: Upgrade OS Packages
-      run: sudo apt-get update && sudo apt-get upgrade -y
-
-    - name: Install dependencies (Python, Node.js, etc.)
-      run: |
-        sudo apt-get install -y python3-pip
-        pip3 install --upgrade pip setuptools
-        npm install
-
     - name: Setup MySQL Database
       run: |
         mysql -h 127.0.0.1 -u root -prootpass -e "CREATE DATABASE IF NOT EXISTS ${{ secrets.DB_NAME }};"
@@ -52,8 +43,8 @@ jobs:
         mysql -h 127.0.0.1 -u root -prootpass -e "GRANT ALL PRIVILEGES ON ${{ secrets.DB_NAME }}.* TO '${{ secrets.DB_USER }}'@'localhost';"
         mysql -h 127.0.0.1 -u root -prootpass -e "FLUSH PRIVILEGES;"
 
-    - name: Install Application Dependencies (pip for Python)
-      run: pip3 install -r requirements.txt
+    - name: Install Node.js dependencies
+      run: npm install
 
     - name: Create logs directory
       run: mkdir -p src/logs
@@ -74,11 +65,11 @@ jobs:
         echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
       working-directory: ./
 
+
     - name: Run Tests
       run: npm test
 
-    # Part 1: Create AMI in Dev
-    - name: Setup AWS CLI (Dev)
+    - name: Setup AWS CLI
       uses: aws-actions/configure-aws-credentials@v1
       with:
         aws-access-key-id: ${{ secrets.DEV_ACCESS_KEY }}
@@ -109,20 +100,22 @@ jobs:
         PACKER_LOG: 1
       working-directory: ./
 
+    - name: Debug build_output.txt
+      run: cat build_output.txt
+
     - name: Extract AMI ID
       id: extract_ami
       run: |
         AMI_ID=$(grep 'artifact,0,id' build_output.txt | cut -d, -f6 | cut -d: -f2)
         echo "AMI_ID=$AMI_ID" >> $GITHUB_ENV
 
-    # Part 2: Share AMI with Demo Account
-    - name: Share AMI with DEMO Account (Dev)
+    - name: Share AMI with DEMO Account
       run: |
         aws ec2 modify-image-attribute --image-id ${{ env.AMI_ID }} --launch-permission "Add=[{UserId=${{ secrets.DEMO_ACCOUNT_ID }} }]"
       env:
         AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
 
-    # Part 3: Refresh Auto Scaling Group in Demo Account
+ # Part 3: Refresh Auto Scaling Group in Demo Account
     - name: Setup AWS CLI for Demo
       uses: aws-actions/configure-aws-credentials@v1
       with:
