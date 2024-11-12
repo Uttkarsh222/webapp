@@ -1,4 +1,4 @@
-name: Packer AMI Build and Share
+name: Packer AMI Build and Deploy
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main  # Trigger only after merging into the main branch
 
 jobs:
-  build-and-share-ami:
+  build-and-deploy-ami:
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -36,6 +36,15 @@ jobs:
     - name: Install MySQL Client
       run: sudo apt-get install mysql-client -y
 
+    - name: Upgrade OS Packages
+      run: sudo apt-get update && sudo apt-get upgrade -y
+
+    - name: Install dependencies (Python, Node.js, etc.)
+      run: |
+        sudo apt-get install -y python3-pip
+        pip3 install --upgrade pip setuptools
+        npm install
+
     - name: Setup MySQL Database
       run: |
         mysql -h 127.0.0.1 -u root -prootpass -e "CREATE DATABASE IF NOT EXISTS ${{ secrets.DB_NAME }};"
@@ -43,8 +52,8 @@ jobs:
         mysql -h 127.0.0.1 -u root -prootpass -e "GRANT ALL PRIVILEGES ON ${{ secrets.DB_NAME }}.* TO '${{ secrets.DB_USER }}'@'localhost';"
         mysql -h 127.0.0.1 -u root -prootpass -e "FLUSH PRIVILEGES;"
 
-    - name: Install Node.js dependencies
-      run: npm install
+    - name: Install Application Dependencies (pip for Python)
+      run: pip3 install -r requirements.txt
 
     - name: Create logs directory
       run: mkdir -p src/logs
@@ -61,13 +70,15 @@ jobs:
         echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
         echo "S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}" >> .env
         echo "STATSD_PORT=${{ secrets.STATSD_PORT }}" >> .env
+        echo "SNS_TOPIC_ARN=${{ secrets.SNS_TOPIC_ARN }}" >> .env
+        echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
       working-directory: ./
-
 
     - name: Run Tests
       run: npm test
 
-    - name: Setup AWS CLI
+    # Part 1: Create AMI in Dev
+    - name: Setup AWS CLI (Dev)
       uses: aws-actions/configure-aws-credentials@v1
       with:
         aws-access-key-id: ${{ secrets.DEV_ACCESS_KEY }}
@@ -98,17 +109,66 @@ jobs:
         PACKER_LOG: 1
       working-directory: ./
 
-    - name: Debug build_output.txt
-      run: cat build_output.txt
-
     - name: Extract AMI ID
       id: extract_ami
       run: |
         AMI_ID=$(grep 'artifact,0,id' build_output.txt | cut -d, -f6 | cut -d: -f2)
         echo "AMI_ID=$AMI_ID" >> $GITHUB_ENV
 
-    - name: Share AMI with DEMO Account
+    # Part 2: Share AMI with Demo Account
+    - name: Share AMI with DEMO Account (Dev)
       run: |
         aws ec2 modify-image-attribute --image-id ${{ env.AMI_ID }} --launch-permission "Add=[{UserId=${{ secrets.DEMO_ACCOUNT_ID }} }]"
       env:
         AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+
+    # Part 3: Refresh Auto Scaling Group in Demo Account
+    - name: Setup AWS CLI for Demo
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.DEMO_ACCESS_KEY }}
+        aws-secret-access-key: ${{ secrets.DEMO_SECRET_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Create New Launch Template Version in Demo
+      run: |
+        aws ec2 create-launch-template-version \
+          --launch-template-id ${{ secrets.LAUNCH_TEMPLATE_ID }} \
+          --source-version 1 \
+          --version-description "New version with updated AMI" \
+          --launch-template-data "{\"ImageId\":\"${{ env.AMI_ID }}\"}"
+
+    - name: Update Auto Scaling Group to Use New Launch Template Version (Demo)
+      run: |
+        aws autoscaling update-auto-scaling-group \
+          --auto-scaling-group-name ${{ secrets.ASG_NAME }} \
+          --launch-template "LaunchTemplateId=${{ secrets.LAUNCH_TEMPLATE_ID }},Version=$Latest"
+
+    - name: Trigger Instance Refresh in Auto Scaling Group (Demo)
+      id: refresh_asg
+      run: |
+        REFRESH_ID=$(aws autoscaling start-instance-refresh \
+          --auto-scaling-group-name ${{ secrets.ASG_NAME }} \
+          --preferences '{"MinHealthyPercentage": 100}' \
+          --query 'InstanceRefreshId' --output text)
+        echo "REFRESH_ID=$REFRESH_ID" >> $GITHUB_ENV
+
+    - name: Wait for Instance Refresh Completion (Demo)
+      run: |
+        STATUS="InProgress"
+        while [ "$STATUS" == "InProgress" ]; do
+          sleep 30
+          STATUS=$(aws autoscaling describe-instance-refreshes \
+            --auto-scaling-group-name ${{ secrets.ASG_NAME }} \
+            --query "InstanceRefreshes[?InstanceRefreshId=='${{ env.REFRESH_ID }}'].Status" \
+            --output text)
+          echo "Current instance refresh status: $STATUS"
+        done
+
+        if [ "$STATUS" == "Successful" ]; then
+          echo "Instance refresh completed successfully."
+          exit 0
+        else
+          echo "Instance refresh failed with status: $STATUS"
+          exit 1
+        fi

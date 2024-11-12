@@ -34,6 +34,10 @@ User.init({
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW,
     },
+    verified: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false, 
+    },
 }, {
     sequelize,
     modelName: 'User',

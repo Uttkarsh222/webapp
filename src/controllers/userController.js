@@ -1,5 +1,10 @@
 const bcrypt = require('bcrypt');
 const User = require('../models/user');
+const AWS = require('aws-sdk');
+
+// Initialize SNS
+const sns = new AWS.SNS({ region: 'us-east-1' }); // Update region if necessary
+const SNS_TOPIC_ARN = process.env.SNS_TOPIC_ARN; // Ensure this is set in your environment variables
 
 const isValidEmail = (email) => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -35,17 +40,23 @@ exports.createUser = async (req, res) => {
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Create new user
+        // Create new user with verified status set to false
         const newUser = await User.create({
             email,
             password: hashedPassword,
             firstName,
             lastName,
+            verified: false, // Set default verified status
             accountCreated: new Date(),
             accountUpdated: new Date(),
         });
 
         console.log('New user created:', newUser.id);
+
+        // Send verification request to SNS
+        const message = JSON.stringify({ userId: newUser.id, email: newUser.email });
+        await sns.publish({ Message: message, TopicArn: SNS_TOPIC_ARN }).promise();
+        console.log('Verification request sent to SNS for user:', newUser.email);
 
         // Return user details with ID and without password
         res.status(201).json({
@@ -63,23 +74,27 @@ exports.createUser = async (req, res) => {
 };
 
 
-
-
 exports.getUser = async (req, res) => {
     console.log('Fetching user details...');
     try {
-        const userId = req.user.id; // Assuming user ID is retrieved from authentication middleware
-        console.log('User ID:', userId);
+        const userId = req.user.id;
+
         // Find the user by ID
         const user = await User.findByPk(userId);
         if (!user) {
             console.log('User not found with ID:', userId);
-            return res.status(404).send(); // User not found
+            return res.status(404).send();
         }
 
-        // Return user details including ID without the password
+        // Check if user is verified
+        if (!user.verified) {
+            console.log('User email not verified:', user.email);
+            return res.status(403).json({ message: 'Email not verified. Please verify your email to continue.' });
+        }
+
+        // Return user details without the password
         res.status(200).json({
-            id: user.id, 
+            id: user.id,
             email: user.email,
             first_name: user.firstName,
             last_name: user.lastName,
@@ -93,19 +108,25 @@ exports.getUser = async (req, res) => {
 };
 
 
-
 exports.updateUser = async (req, res) => {
     console.log('Updating user details...');
     try {
-        const userId = req.user.id; // Get user ID from the request
-        const { firstName, lastName, password, email } = req.body; // Extract first name, last name, password, and email
+        const userId = req.user.id;
+        const { firstName, lastName, password, email } = req.body;
 
         console.log('Request for updating user ID:', userId);
+
         // Find the user in the database
         const user = await User.findByPk(userId);
         if (!user) {
             console.log('User not found with ID:', userId);
-            return res.status(404).send(); // User not found
+            return res.status(404).send();
+        }
+
+        // Check if user is verified
+        if (!user.verified) {
+            console.log('User email not verified:', user.email);
+            return res.status(403).json({ message: 'Email not verified. Please verify your email to continue.' });
         }
 
         // Prevent updating account_created and account_updated
@@ -122,20 +143,20 @@ exports.updateUser = async (req, res) => {
 
         // Only hash and update password if provided
         if (password) {
-            user.password = await bcrypt.hash(password, 10); // Hash password before saving
+            user.password = await bcrypt.hash(password, 10);
         }
 
         // Update first and last names if provided
         user.firstName = firstName || user.firstName;
         user.lastName = lastName || user.lastName;
 
-        user.accountUpdated = new Date(); // Update the accountUpdated field
+        user.accountUpdated = new Date();
 
-        await user.save(); // Save the updated user details
+        await user.save();
         console.log('User updated successfully:', userId);
-        res.status(204).send(); // No content response
+        res.status(204).send();
     } catch (error) {
         console.error('Error in updateUser:', error);
-        res.status(500).send(); // Internal server error
+        res.status(500).send();
     }
 };

@@ -3,6 +3,7 @@ const healthRoutes = require('./routes/healthRoutes');
 const userRoutes = require('./routes/userRoutes');
 const imageRoutes = require('./routes/imageRoutes');
 const sequelize = require('./config/dbConfig');
+const User = require('./models/user'); // Import the User model
 const { logger, statsDClient } = require('./logger'); // Import centralized logger and metrics
 require('dotenv').config();
 
@@ -41,6 +42,11 @@ app.use('*', (req, res) => {
 });
 
 if (process.env.NODE_ENV !== 'test') {
+    // Sync the specific User model with `alter: true` to update the table schema
+    User.sync({ alter: true })
+        .then(() => console.log("Database synchronized with Users table"))
+        .catch((error) => console.error("Error synchronizing Users table:", error));
+
     sequelize.sync()
         .then(() => {
             console.log('Database & tables created!');

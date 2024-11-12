@@ -22,6 +22,14 @@ const authenticate = (req, res, next) => {
                 console.log(`No user found with email: ${email}`);
                 return res.status(401).send();
             }
+            
+            // Check if the user has verified their email
+            if (!user.verified) {
+                console.log('User email not verified:', email);
+                return res.status(403).send({ message: 'Email not verified. Please verify your email to continue.' });
+            }
+
+            // Authenticate the password
             bcrypt.compare(password, user.password)
                 .then((isMatch) => {
                     if (!isMatch) {
