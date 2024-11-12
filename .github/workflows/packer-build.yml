@@ -110,7 +110,7 @@ jobs:
 
     - name: Share AMI with DEMO Account
       run: |
-        aws ec2 modify-image-attribute --image-id ${{ env.AMI_ID }} --launch-permission "Add=[{UserId=${{ secrets.DEMO_ACCOUNT_ID }}]"
+        aws ec2 modify-image-attribute --image-id ${{ env.AMI_ID }} --launch-permission "Add=[{UserId='${{ secrets.DEMO_ACCOUNT_ID }}'}]"
       env:
         AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
 
