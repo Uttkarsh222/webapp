@@ -65,7 +65,6 @@ jobs:
         echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
       working-directory: ./
 
-
     - name: Run Tests
       run: npm test
 
@@ -111,11 +110,11 @@ jobs:
 
     - name: Share AMI with DEMO Account
       run: |
-        aws ec2 modify-image-attribute --image-id ${{ env.AMI_ID }} --launch-permission "Add=[{UserId=${{ secrets.DEMO_ACCOUNT_ID }} }]"
+        aws ec2 modify-image-attribute --image-id ${{ env.AMI_ID }} --launch-permission "Add=[{UserId=${{ secrets.DEMO_ACCOUNT_ID }}]"
       env:
         AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
 
- # Part 3: Refresh Auto Scaling Group in Demo Account
+    # Part 3: Refresh Auto Scaling Group in Demo Account
     - name: Setup AWS CLI for Demo
       uses: aws-actions/configure-aws-credentials@v1
       with:
@@ -150,7 +149,7 @@ jobs:
       run: |
         STATUS="InProgress"
         while [ "$STATUS" == "InProgress" ]; do
-          sleep 30
+          sleep 60
           STATUS=$(aws autoscaling describe-instance-refreshes \
             --auto-scaling-group-name ${{ secrets.ASG_NAME }} \
             --query "InstanceRefreshes[?InstanceRefreshId=='${{ env.REFRESH_ID }}'].Status" \
