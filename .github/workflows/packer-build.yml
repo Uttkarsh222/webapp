@@ -129,11 +129,19 @@ jobs:
           --version-description "New version with updated AMI" \
           --launch-template-data "{\"ImageId\":\"${{ env.AMI_ID }}\"}"
 
+      - name: Get Latest Launch Template Version
+      id: get_latest_version
+      run: |
+        LATEST_VERSION=$(aws ec2 describe-launch-templates \
+          --launch-template-ids ${{ secrets.LAUNCH_TEMPLATE_ID }} \
+          --query "LaunchTemplates[0].LatestVersionNumber" --output text)
+        echo "LATEST_VERSION=$LATEST_VERSION" >> $GITHUB_ENV
+
     - name: Update Auto Scaling Group to Use New Launch Template Version (Demo)
       run: |
         aws autoscaling update-auto-scaling-group \
           --auto-scaling-group-name ${{ secrets.ASG_NAME }} \
-          --launch-template "LaunchTemplateId=${{ secrets.LAUNCH_TEMPLATE_ID }},Version=$Latest"
+          --launch-template "LaunchTemplateId=${{ secrets.LAUNCH_TEMPLATE_ID }},Version=${{ env.LATEST_VERSION }}"
 
     - name: Trigger Instance Refresh in Auto Scaling Group (Demo)
       id: refresh_asg
