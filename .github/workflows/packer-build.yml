@@ -129,7 +129,7 @@ jobs:
           --version-description "New version with updated AMI" \
           --launch-template-data "{\"ImageId\":\"${{ env.AMI_ID }}\"}"
 
-      - name: Get Latest Launch Template Version
+    - name: Get Latest Launch Template Version
       id: get_latest_version
       run: |
         LATEST_VERSION=$(aws ec2 describe-launch-templates \
