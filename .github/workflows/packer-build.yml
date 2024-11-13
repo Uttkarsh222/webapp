@@ -219,3 +219,10 @@ jobs:
           echo "Instance refresh failed with status: $STATUS"
           exit 1
         fi
+        
+    - name: Ensure Desired Capacity After Refresh
+      run: |
+        aws autoscaling update-auto-scaling-group \
+          --auto-scaling-group-name ${{ secrets.ASG_NAME }} \
+          --desired-capacity 3
+        
