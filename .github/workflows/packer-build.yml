@@ -124,11 +124,11 @@ jobs:
 
     - name: Create New Launch Template Version in Demo
       run: |
+        # Create a new launch template version with updated security groups using variables for flexibility
         aws ec2 create-launch-template-version \
           --launch-template-id ${{ secrets.LAUNCH_TEMPLATE_ID }} \
-          --version-description "New version with updated AMI" \
-          --launch-template-data "{\"ImageId\":\"${{ env.AMI_ID }}\",\"InstanceType\":\"${{ secrets.INSTANCE_TYPE }}\"}"
-
+          --version-description "New version with updated AMI and security groups" \
+          --launch-template-data "{\"ImageId\":\"${{ env.AMI_ID }}\",\"InstanceType\":\"${{ secrets.INSTANCE_TYPE }}\",\"SecurityGroupIds\":[\"${{ secrets.APP_SECURITY_GROUP_ID }}\",\"${{ secrets.LB_SECURITY_GROUP_ID }}\"]}"
 
     - name: Get Latest Launch Template Version
       id: get_latest_version
