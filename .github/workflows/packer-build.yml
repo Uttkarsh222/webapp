@@ -122,13 +122,43 @@ jobs:
         aws-secret-access-key: ${{ secrets.DEMO_SECRET_KEY }}
         aws-region: ${{ secrets.AWS_REGION }}
 
+    - name: Create and Encode User Data
+      run: |
+        # Create the user data script with environment variables
+        cat <<EOF > user_data.sh
+        #!/bin/bash
+        echo "PORT=${{ secrets.APPLICATION_PORT }}" > /home/ubuntu/webapp/.env
+        echo "DATABASE_NAME=${{ secrets.DB_NAME }}" >> /home/ubuntu/webapp/.env
+        echo "DATABASE_USER=${{ secrets.DB_USERNAME }}" >> /home/ubuntu/webapp/.env
+        echo "DATABASE_PASSWORD=${{ secrets.DB_PASSWORD }}" >> /home/ubuntu/webapp/.env
+        echo "DATABASE_HOST=${{ secrets.RDS_HOST }}" >> /home/ubuntu/webapp/.env
+        echo "DATABASE_DIALECT=mysql" >> /home/ubuntu/webapp/.env
+        echo "NODE_ENV=production" >> /home/ubuntu/webapp/.env
+        echo "S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}" >> /home/ubuntu/webapp/.env
+        echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> /home/ubuntu/webapp/.env
+        echo "STATSD_PORT=8125" >> /home/ubuntu/webapp/.env
+        echo "SNS_TOPIC_ARN=${{ secrets.SNS_TOPIC_ARN }}" >> /home/ubuntu/webapp/.env
+        echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> /home/ubuntu/webapp/.env
+        EOF
+        
+        # Encode the user data script to base64
+        base64 user_data.sh | tr -d '\n' > encoded_user_data.txt
+        USER_DATA=$(cat encoded_user_data.txt)
+        echo "ENCODED_USER_DATA=$USER_DATA" >> $GITHUB_ENV
+
     - name: Create New Launch Template Version in Demo
       run: |
-        # Create a new launch template version with updated security groups using variables for flexibility
+        # Create a new launch template version with updated AMI, instance type, security groups, and user data
         aws ec2 create-launch-template-version \
           --launch-template-id ${{ secrets.LAUNCH_TEMPLATE_ID }} \
-          --version-description "New version with updated AMI and security groups" \
-          --launch-template-data "{\"ImageId\":\"${{ env.AMI_ID }}\",\"InstanceType\":\"${{ secrets.INSTANCE_TYPE }}\",\"SecurityGroupIds\":[\"${{ secrets.APP_SECURITY_GROUP_ID }}\",\"${{ secrets.LB_SECURITY_GROUP_ID }}\"]}"
+          --version-description "New version with updated AMI, security groups, and user data" \
+          --launch-template-data "{
+            \"ImageId\": \"${{ env.AMI_ID }}\",
+            \"InstanceType\": \"${{ secrets.INSTANCE_TYPE }}\",
+            \"SecurityGroupIds\": [\"${{ secrets.APP_SECURITY_GROUP_ID }}\", \"${{ secrets.LB_SECURITY_GROUP_ID }}\"],
+            \"KeyName\": \"${{ secrets.KEY_NAME }}\",
+            \"UserData\": \"${{ env.ENCODED_USER_DATA }}\"
+          }"
 
     - name: Get Latest Launch Template Version
       id: get_latest_version
@@ -142,7 +172,8 @@ jobs:
       run: |
         aws autoscaling update-auto-scaling-group \
           --auto-scaling-group-name ${{ secrets.ASG_NAME }} \
-          --launch-template "LaunchTemplateId=${{ secrets.LAUNCH_TEMPLATE_ID }},Version=${{ env.LATEST_VERSION }}"
+          --launch-template "LaunchTemplateId=${{ secrets.LAUNCH_TEMPLATE_ID }},Version=${{ env.LATEST_VERSION }}" \
+          --desired-capacity 3
 
     - name: Trigger Instance Refresh in Auto Scaling Group (Demo)
       id: refresh_asg
