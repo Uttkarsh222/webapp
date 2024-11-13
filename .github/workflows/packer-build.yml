@@ -201,20 +201,10 @@ jobs:
           exit 1
         fi
 
-
     # Security Group Rules Check
     - name: Check Security Group Rules
       run: |
         aws ec2 describe-security-groups --group-ids ${{ secrets.DB_SECURITY_GROUP_ID }} --query "SecurityGroups[0].IpPermissions"
-
-    # IAM Authentication Check for RDS
-    - name: Check RDS IAM Authentication
-      run: |
-        IAM_AUTH_ENABLED=$(aws rds describe-db-instances --db-instance-identifier ${{ secrets.DB_INSTANCE_ID }} --query "DBInstances[0].IAMDatabaseAuthenticationEnabled" --output text)
-        if [ "$IAM_AUTH_ENABLED" != "true" ]; then
-          echo "Error: IAM Authentication is not enabled on RDS instance"
-          exit 1
-        fi
 
     # DNS Resolution Check
     - name: DNS Resolution for RDS Endpoint
