@@ -183,7 +183,7 @@ jobs:
           --launch-template-ids ${{ secrets.LAUNCH_TEMPLATE_ID }} \
           --query "LaunchTemplates[0].LatestVersionNumber" --output text)
         echo "LATEST_VERSION=$LATEST_VERSION" >> $GITHUB_ENV
-        
+
     # Verify RDS Parameter Group Settings
     - name: Retrieve RDS Parameter Group Settings
       run: |
@@ -191,14 +191,16 @@ jobs:
         --query "DBInstances[0].DBParameterGroups[0].DBParameterGroupName"
 
     # Networking and VPC Configuration Check
-    - name: Verify VPC for EC2 and RDS
+    - name: Verify VPC for EC2 Auto Scaling Group and RDS
       run: |
         RDS_VPC=$(aws rds describe-db-instances --db-instance-identifier ${{ secrets.DB_INSTANCE_ID }} --query "DBInstances[0].DBSubnetGroup.VpcId" --output text)
-        EC2_VPC=$(aws ec2 describe-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }} --query "Reservations[0].Instances[0].VpcId" --output text)
-        if [ "$RDS_VPC" != "$EC2_VPC" ]; then
-          echo "Error: RDS and EC2 are in different VPCs"
+        ASG_VPC=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names ${{ secrets.ASG_NAME }} --query "AutoScalingGroups[0].VPCZoneIdentifier" --output text | cut -d',' -f1 | xargs -I {} aws ec2 describe-subnets --subnet-ids {} --query "Subnets[0].VpcId" --output text)
+
+        if [ "$RDS_VPC" != "$ASG_VPC" ]; then
+          echo "Error: RDS and Auto Scaling Group are in different VPCs"
           exit 1
         fi
+
 
     # Security Group Rules Check
     - name: Check Security Group Rules
