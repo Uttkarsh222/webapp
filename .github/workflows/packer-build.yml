@@ -127,7 +127,8 @@ jobs:
         aws ec2 create-launch-template-version \
           --launch-template-id ${{ secrets.LAUNCH_TEMPLATE_ID }} \
           --version-description "New version with updated AMI" \
-          --launch-template-data "{\"ImageId\":\"${{ env.AMI_ID }}\"}"
+          --launch-template-data "{\"ImageId\":\"${{ env.AMI_ID }}\",\"InstanceType\":\"${{ secrets.INSTANCE_TYPE }}\"}"
+
 
     - name: Get Latest Launch Template Version
       id: get_latest_version
