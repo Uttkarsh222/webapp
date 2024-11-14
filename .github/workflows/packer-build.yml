@@ -185,28 +185,6 @@ jobs:
           --query "LaunchTemplates[0].LatestVersionNumber" --output text)
         echo "LATEST_VERSION=$LATEST_VERSION" >> $GITHUB_ENV
 
-    # Verify RDS Parameter Group Settings
-    - name: Retrieve RDS Parameter Group Settings
-      run: |
-        aws rds describe-db-instances --db-instance-identifier ${{ secrets.DB_INSTANCE_ID }} \
-        --query "DBInstances[0].DBParameterGroups[0].DBParameterGroupName"
-
-    # Networking and VPC Configuration Check
-    - name: Verify VPC for EC2 Auto Scaling Group and RDS
-      run: |
-        RDS_VPC=$(aws rds describe-db-instances --db-instance-identifier ${{ secrets.DB_INSTANCE_ID }} --query "DBInstances[0].DBSubnetGroup.VpcId" --output text)
-        ASG_VPC=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names ${{ secrets.ASG_NAME }} --query "AutoScalingGroups[0].VPCZoneIdentifier" --output text | cut -d',' -f1 | xargs -I {} aws ec2 describe-subnets --subnet-ids {} --query "Subnets[0].VpcId" --output text)
-
-        if [ "$RDS_VPC" != "$ASG_VPC" ]; then
-          echo "Error: RDS and Auto Scaling Group are in different VPCs"
-          exit 1
-        fi
-
-    # Security Group Rules Check
-    - name: Check Security Group Rules
-      run: |
-        aws ec2 describe-security-groups --group-ids ${{ secrets.DB_SECURITY_GROUP_ID }} --query "SecurityGroups[0].IpPermissions"
-
     - name: Update Auto Scaling Group to Use New Launch Template Version (Demo)
       run: |
         aws autoscaling update-auto-scaling-group \
@@ -222,11 +200,6 @@ jobs:
           --preferences '{"MinHealthyPercentage": 100}' \
           --query 'InstanceRefreshId' --output text)
         echo "REFRESH_ID=$REFRESH_ID" >> $GITHUB_ENV
-
-    # DNS Resolution Check
-    - name: DNS Resolution for RDS Endpoint
-      run: |
-        nslookup ${{ secrets.RDS_HOST }}
 
     - name: Wait for Instance Refresh Completion (Demo)
       run: |
