@@ -227,11 +227,6 @@ jobs:
       run: |
         nslookup ${{ secrets.RDS_HOST }}
 
-    # Port Connectivity Check (instead of ping)
-    - name: Check MySQL Port Connectivity on RDS
-      run: |
-        telnet ${{ secrets.RDS_HOST }} 3306 || echo "Error: Cannot connect to RDS on port 3306"
-
     - name: Wait for Instance Refresh Completion (Demo)
       run: |
         STATUS="InProgress"
