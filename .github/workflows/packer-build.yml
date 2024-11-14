@@ -172,7 +172,7 @@ jobs:
             \"ImageId\": \"${{ env.AMI_ID }}\",
             \"InstanceType\": \"${{ secrets.INSTANCE_TYPE }}\",
             \"SecurityGroupIds\": [\"${{ secrets.APP_SECURITY_GROUP_ID }}\"],
-            \"IamInstanceProfile\": {\"Name\": \"${{ secrets.EC2_ROLE_NAME }}\"},
+            \"IamInstanceProfile\": {\"Arn\": \"${{ secrets.EC2_ROLE_NAME }}\"},
             \"KeyName\": \"${{ secrets.KEY_NAME }}\",
             \"UserData\": \"${{ env.ENCODED_USER_DATA }}\"
           }"
