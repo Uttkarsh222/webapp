@@ -10,45 +10,57 @@ AWS.config.update({
 const s3 = new AWS.S3();
 
 exports.uploadProfilePic = async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json();
-  }
-
-  const start = Date.now();
-  try {
-    const existingImage = await Image.findOne({ where: { userId: req.user.id } });
-    if (existingImage) {
-      return res.status(400).json();
+    if (!req.file) {
+      return res.status(400).json({ message: 'File is required.' });
     }
-
-    const file = req.file;
-    const key = `${req.user.id}/${file.originalname}`;
-    const params = {
-      Bucket: process.env.S3_BUCKET_NAME,
-      Key: key,
-      Body: file.buffer,
-      ContentType: file.mimetype,
-    };
-
-    const uploadResult = await s3.upload(params).promise();
-    const duration = Date.now() - start;
-    statsDClient.timing('s3.upload.duration', duration);
-    logger.info(`S3 upload duration for user ID ${req.user.id}: ${duration}ms`);
-
-    const image = await Image.create({
-      fileName: file.originalname,
-      url: uploadResult.Location,
-      userId: req.user.id
-    });
-
-    res.status(201).json(image);
-  } catch (error) {
-    const duration = Date.now() - start;
-    logger.error(`Error uploading file for user ID ${req.user.id}: ${error.message} - Duration: ${duration}ms`);
-    statsDClient.increment('s3.upload.fail');
-    res.status(500).json();
-  }
-};
+  
+    const start = Date.now();
+  
+    try {
+      // Check if the user is verified
+      if (!req.user.verified) {
+        logger.warn(`Unverified user ID ${req.user.id} attempted to upload a profile picture.`);
+        return res.status(403).json({ message: 'You must verify your email to upload a profile picture.' });
+      }
+  
+      // Check if the user already has an image
+      const existingImage = await Image.findOne({ where: { userId: req.user.id } });
+      if (existingImage) {
+        logger.warn(`User ID ${req.user.id} already has a profile picture.`);
+        return res.status(400).json({ message: 'A profile picture already exists.' });
+      }
+  
+      const file = req.file;
+      const key = `${req.user.id}/${file.originalname}`;
+      const params = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: key,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      };
+  
+      // Upload the file to S3
+      const uploadResult = await s3.upload(params).promise();
+      const duration = Date.now() - start;
+      statsDClient.timing('s3.upload.duration', duration);
+      logger.info(`S3 upload duration for user ID ${req.user.id}: ${duration}ms`);
+  
+      // Save image metadata to the database
+      const image = await Image.create({
+        fileName: file.originalname,
+        url: uploadResult.Location,
+        userId: req.user.id,
+      });
+  
+      res.status(201).json(image);
+    } catch (error) {
+      const duration = Date.now() - start;
+      logger.error(`Error uploading file for user ID ${req.user.id}: ${error.message} - Duration: ${duration}ms`);
+      statsDClient.increment('s3.upload.fail');
+      res.status(500).json({ message: 'Failed to upload the profile picture.' });
+    }
+  };
+  
 
 exports.deleteProfilePic = async (req, res) => {
   if (Object.keys(req.body).length > 0 || req.file || req.files) {

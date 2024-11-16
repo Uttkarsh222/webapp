@@ -1,66 +1,113 @@
+const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const User = require('../models/user');
 const AWS = require('aws-sdk');
 
 // Initialize SNS
-const sns = new AWS.SNS({ region: 'us-east-1' }); // Update region if necessary
-const SNS_TOPIC_ARN = process.env.SNS_TOPIC_ARN; // Ensure this is set in your environment variables
+const sns = new AWS.SNS({ region: 'us-east-1' }); // Update region if needed
+const SNS_TOPIC_ARN = process.env.SNS_TOPIC_ARN;
 
 const isValidEmail = (email) => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return regex.test(email);
 };
 
+
 exports.createUser = async (req, res) => {
     try {
-        const { email, password, firstName, lastName } = req.body;
+        const { email, password, firstName, lastName, token } = req.body;
 
-        // Log the incoming request body
-        console.log('Request Body:', req.body);
+        // **Handle Email Verification Workflow**
+        if (token) {
+            console.log('Verifying user with token...');
+            try {
+                // Verify the JWT token
+                const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        // Check for empty fields
-        if (!firstName || !lastName || !password) {
-            console.log('Missing fields in request');
-            return res.status(400).send();
+                // Find the user with the given ID and token
+                const user = await User.findOne({ where: { id: decoded.userId, verificationToken: token } });
+
+                if (!user) {
+                    console.log('Invalid token or user not found.');
+                    return res.status(404).json({ message: 'Invalid token or user not found.' });
+                }
+
+                if (user.verified) {
+                    console.log('User is already verified.');
+                    return res.status(400).json({ message: 'User is already verified.' });
+                }
+
+                // Mark the user as verified and clear the token
+                user.verified = true;
+                user.verificationToken = null;
+                await user.save();
+
+                console.log('User email verified successfully:', user.email);
+                return res.status(200).json({ message: 'Email successfully verified.' });
+            } catch (error) {
+                console.error('Error verifying token:', error.message);
+
+                if (error.name === 'TokenExpiredError') {
+                    return res.status(400).json({ message: 'Token has expired. Please register again.' });
+                }
+
+                return res.status(500).json({ message: 'Failed to verify email.' });
+            }
+        }
+
+        // **Handle User Creation Workflow**
+        console.log('Creating a new user...');
+
+        // Validate required fields
+        if (!email || !password || !firstName || !lastName) {
+            console.log('Missing required fields in request.');
+            return res.status(400).json({ message: 'Missing required fields.' });
         }
 
         // Validate email format
         if (!isValidEmail(email)) {
             console.log('Invalid email format:', email);
-            return res.status(400).send();
+            return res.status(400).json({ message: 'Invalid email format.' });
         }
 
-        // Check if user already exists
+        // Check if the user already exists
         const existingUser = await User.findOne({ where: { email } });
         if (existingUser) {
             console.log('User already exists with email:', email);
-            return res.status(400).send();
+            return res.status(400).json({ message: 'User already exists.' });
         }
 
-        // Hash password
+        // Hash the password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Create new user with verified status set to false
+        // Create a new user with `verified` set to false
         const newUser = await User.create({
             email,
             password: hashedPassword,
             firstName,
             lastName,
-            verified: false, // Set default verified status
+            verified: false,
             accountCreated: new Date(),
             accountUpdated: new Date(),
         });
 
         console.log('New user created:', newUser.id);
 
+        // Generate a verification token
+        const verificationToken = jwt.sign({ userId: newUser.id }, process.env.JWT_SECRET, { expiresIn: '2m' });
+
+        // Save the verification token to the database
+        newUser.verificationToken = verificationToken;
+        await newUser.save();
+
         // Send verification request to SNS
-        const message = JSON.stringify({ userId: newUser.id, email: newUser.email });
+        const message = JSON.stringify({ userId: newUser.id, email: newUser.email, token: verificationToken });
         await sns.publish({ Message: message, TopicArn: SNS_TOPIC_ARN }).promise();
         console.log('Verification request sent to SNS for user:', newUser.email);
 
-        // Return user details with ID and without password
+        // Return user details without sensitive information
         res.status(201).json({
-            id: newUser.id, 
+            id: newUser.id,
             email: newUser.email,
             first_name: newUser.firstName,
             last_name: newUser.lastName,
@@ -68,8 +115,8 @@ exports.createUser = async (req, res) => {
             account_updated: newUser.accountUpdated,
         });
     } catch (error) {
-        console.error('Error in createUser:', error);
-        res.status(500).send();
+        console.error('Error in createUser:', error.message);
+        res.status(500).json({ message: 'Internal server error.' });
     }
 };
 

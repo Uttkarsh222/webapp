@@ -38,6 +38,10 @@ User.init({
         type: DataTypes.BOOLEAN,
         defaultValue: false, 
     },
+    verificationToken: {
+        type: DataTypes.STRING, // Store the JWT token
+        allowNull: true,
+    },
 }, {
     sequelize,
     modelName: 'User',
