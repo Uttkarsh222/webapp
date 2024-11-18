@@ -115,6 +115,7 @@ jobs:
         AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
 
  # Part 3: Refresh Auto Scaling Group in Demo Account
+
     - name: Setup AWS CLI for Demo
       uses: aws-actions/configure-aws-credentials@v1
       with:
@@ -187,5 +188,3 @@ jobs:
         aws autoscaling update-auto-scaling-group \
           --auto-scaling-group-name ${{ secrets.ASG_NAME }} \
           --desired-capacity 3
-
-            
