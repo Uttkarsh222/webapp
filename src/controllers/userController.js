@@ -12,51 +12,10 @@ const isValidEmail = (email) => {
     return regex.test(email);
 };
 
-
+// **Create a New User**
 exports.createUser = async (req, res) => {
     try {
-        const { email, password, firstName, lastName, token } = req.body;
-
-        // **Handle Email Verification Workflow**
-        if (token) {
-            console.log('Verifying user with token...');
-            try {
-                // Verify the JWT token
-                const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-                // Find the user with the given ID and token
-                const user = await User.findOne({ where: { id: decoded.userId, verificationToken: token } });
-
-                if (!user) {
-                    console.log('Invalid token or user not found.');
-                    return res.status(404).json({ message: 'Invalid token or user not found.' });
-                }
-
-                if (user.verified) {
-                    console.log('User is already verified.');
-                    return res.status(400).json({ message: 'User is already verified.' });
-                }
-
-                // Mark the user as verified and clear the token
-                user.verified = true;
-                user.verificationToken = null;
-                await user.save();
-
-                console.log('User email verified successfully:', user.email);
-                return res.status(200).json({ message: 'Email successfully verified.' });
-            } catch (error) {
-                console.error('Error verifying token:', error.message);
-
-                if (error.name === 'TokenExpiredError') {
-                    return res.status(400).json({ message: 'Token has expired. Please register again.' });
-                }
-
-                return res.status(500).json({ message: 'Failed to verify email.' });
-            }
-        }
-
-        // **Handle User Creation Workflow**
-        console.log('Creating a new user...');
+        const { email, password, firstName, lastName } = req.body;
 
         // Validate required fields
         if (!email || !password || !firstName || !lastName) {
@@ -94,14 +53,20 @@ exports.createUser = async (req, res) => {
         console.log('New user created:', newUser.id);
 
         // Generate a verification token
-        const verificationToken = jwt.sign({ userId: newUser.id }, process.env.JWT_SECRET, { expiresIn: '2m' });
+        const verificationToken = jwt.sign({ userId: newUser.id }, process.env.JWT_SECRET, { expiresIn: '10m' });
 
         // Save the verification token to the database
         newUser.verificationToken = verificationToken;
         await newUser.save();
 
-        // Send verification request to SNS
-        const message = JSON.stringify({ userId: newUser.id, email: newUser.email, token: verificationToken });
+        // Publish a message to SNS for verification email
+        const message = JSON.stringify({
+            userId: newUser.id,
+            email: newUser.email,
+            token: verificationToken,
+            timestamp: new Date().toISOString(),
+        });
+
         await sns.publish({ Message: message, TopicArn: SNS_TOPIC_ARN }).promise();
         console.log('Verification request sent to SNS for user:', newUser.email);
 
@@ -120,7 +85,52 @@ exports.createUser = async (req, res) => {
     }
 };
 
+// **Verify a User's Email**
+exports.verifyUser = async (req, res) => {
+    try {
+        const { token } = req.query;
+        console.log('Received token:', token);
 
+        if (!token) {
+            console.log('Token is missing');
+            return res.status(400).json({ message: 'Token is required.' });
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        console.log('Decoded token:', decoded);
+
+        const user = await User.findOne({ where: { id: decoded.userId, verificationToken: token } });
+        console.log('Found user:', user);
+
+        if (!user) {
+            console.log('Invalid token or user not found.');
+            return res.status(404).json({ message: 'Invalid token or user not found.' });
+        }
+
+        if (user.verified) {
+            console.log('User is already verified.');
+            return res.status(400).json({ message: 'User is already verified.' });
+        }
+
+        user.verified = true;
+        user.verificationToken = null;
+        await user.save();
+
+        console.log('User email verified successfully:', user.email);
+        return res.status(200).json({ message: 'Email successfully verified.' });
+    } catch (error) {
+        console.error('Error verifying token:', error.message);
+
+        if (error.name === 'TokenExpiredError') {
+            return res.status(400).json({ message: 'Token has expired. Please register again.' });
+        }
+
+        return res.status(500).json({ message: 'Internal server error.' });
+    }
+};
+
+
+// **Get User Details**
 exports.getUser = async (req, res) => {
     console.log('Fetching user details...');
     try {
@@ -154,7 +164,7 @@ exports.getUser = async (req, res) => {
     }
 };
 
-
+// **Update User Details**
 exports.updateUser = async (req, res) => {
     console.log('Updating user details...');
     try {

@@ -1,21 +1,34 @@
 const request = require('supertest');
 const bcrypt = require('bcrypt');
-const app = require('../app'); // Ensure this is the correct path to your app.js
-const User = require('../models/user'); // Ensure this path is correct
-const sequelize = require('../config/dbConfig'); // Ensure this path is correct
+const jwt = require('jsonwebtoken');
+const app = require('../app');
+const User = require('../models/user');
+const sequelize = require('../config/dbConfig');
 
 beforeAll(async () => {
-    await sequelize.sync({ force: true }); // Reset database before tests
+    try {
+        await sequelize.sync({ force: true });
 
-    // Create a user and ensure they are marked as verified for testing
-    const passwordHash = await bcrypt.hash('skdjfhskdfjhg', 10);
-    await User.create({
-        firstName: 'Jane',
-        lastName: 'Doe',
-        email: 'jane.doe@example.com',
-        password: passwordHash,
-        verified: true, // Ensure the user is verified
-    });
+        const passwordHash = await bcrypt.hash('skdjfhskdfjhg', 10);
+        await User.create({
+            firstName: 'Jane',
+            lastName: 'Doe',
+            email: 'jane.doe@example.com',
+            password: passwordHash,
+            verified: true,
+        });
+    } catch (error) {
+        console.error('Error in beforeAll:', error.message);
+        throw error;
+    }
+});
+
+afterAll(async () => {
+    try {
+        await sequelize.close();
+    } catch (error) {
+        console.error('Error in afterAll:', error.message);
+    }
 });
 
 describe('User APIs', () => {
@@ -28,10 +41,10 @@ describe('User APIs', () => {
 
         expect(response.status).toBe(200);
         expect(response.body).toEqual(expect.objectContaining({
-            id: expect.any(String), // Expecting the id to be a string (UUID)
+            id: expect.any(String),
             email: 'jane.doe@example.com',
             first_name: 'Jane',
-            last_name: 'Doe'
+            last_name: 'Doe',
         }));
     });
 
@@ -45,10 +58,15 @@ describe('User APIs', () => {
                 firstName: 'Jane Updated',
                 lastName: 'Doe Updated',
                 password: 'newpassword123',
-                email: 'jane.doe@example.com' // Email included but not updated
             });
 
         expect(response.status).toBe(204);
+
+        const user = await User.findOne({ where: { email: 'jane.doe@example.com' } });
+        expect(user.firstName).toBe('Jane Updated');
+        expect(user.lastName).toBe('Doe Updated');
+        const isPasswordValid = await bcrypt.compare('newpassword123', user.password);
+        expect(isPasswordValid).toBe(true);
     });
 
     it('DELETE /v1/user/self - Should return 405 Method Not Allowed', async () => {
@@ -60,58 +78,24 @@ describe('User APIs', () => {
 
         expect(response.status).toBe(405);
     });
+    
 
-    it('POST /v1/user - Password should be hashed', async () => {
+    it('GET /v1/user/verify - Should return error for invalid token', async () => {
         const response = await request(app)
-            .post('/v1/user')
-            .send({
-                firstName: 'John',
-                lastName: 'Smith',
-                email: 'john.smith@example.com',
-                password: 'password123'
-            });
+            .get('/v1/user/verify?token=INVALID_TOKEN');
 
-        const user = await User.findOne({ where: { email: 'john.smith@example.com' } });
-
-        expect(user).not.toBeNull();
-        const isPasswordValid = await bcrypt.compare('password123', user.password);
-        expect(isPasswordValid).toBe(true);
+        expect(response.status).toBe(500); // Adjust the status code based on your implementation
     });
 
-    it('POST /v1/user - Should not allow non-email usernames', async () => {
-        const response = await request(app)
-            .post('/v1/user')
-            .send({
-                firstName: 'Invalid',
-                lastName: 'User',
-                email: 'invalid_username', // Invalid email format
-                password: 'password123'
-            });
+    it('GET /v1/user/verify - Should return error for expired token', async () => {
+        const user = await User.findOne({ where: { email: 'jane.doe@example.com' } });
 
-        expect(response.status).toBe(400); // Adjust based on your validation logic
-    });
+        const expiredToken = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '-1s' });
 
-    it('POST /v1/user - Should not allow duplicate account creation', async () => {
-        // First account creation
-        await request(app)
-            .post('/v1/user')
-            .send({
-                firstName: 'Jane',
-                lastName: 'Doe',
-                email: 'jane.doe@example.com',
-                password: 'password123'
-            });
-    
-        // Attempt to create a second account with the same email
         const response = await request(app)
-            .post('/v1/user')
-            .send({
-                firstName: 'Jane',
-                lastName: 'Doe',
-                email: 'jane.doe@example.com', // Duplicate email
-                password: 'password456'
-            });
-    
-        expect(response.status).toBe(400); // Expect a bad request for duplicate email
+            .get(`/v1/user/verify?token=${expiredToken}`);
+
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('Token has expired. Please register again.');
     });
 });

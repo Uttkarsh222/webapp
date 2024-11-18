@@ -7,10 +7,11 @@ const router = express.Router();
 // Public route for user creation (no authentication required)
 router.post('/user', userController.createUser);
 
+// Public route for email verification (no authentication required)
+router.get('/user/verify', userController.verifyUser);
 
 // Middleware to catch unsupported methods on /user/self
 router.use('/user/self', (req, res, next) => {
-
     const methodNotAllowedMethods = ['DELETE', 'HEAD', 'OPTIONS', 'PATCH'];
     if (methodNotAllowedMethods.includes(req.method)) {
         return res.status(405).send(); // Method Not Allowed
@@ -18,12 +19,8 @@ router.use('/user/self', (req, res, next) => {
     next(); // Allow other methods to proceed
 });
 
-
 // Protected routes requiring Basic Authentication
 router.get('/user/self', authenticate, userController.getUser);
 router.put('/user/self', authenticate, userController.updateUser);
-
-
-
 
 module.exports = router;
