@@ -125,13 +125,15 @@ jobs:
 
     - name: Create New Launch Template Version in Demo
       run: |
-        # Create a new launch template version with only the updated AMI
+        # Create a new launch template version with updated AMI and explicitly define InstanceType
         aws ec2 create-launch-template-version \
           --launch-template-id ${{ secrets.LAUNCH_TEMPLATE_ID }} \
-          --version-description "Updated AMI only" \
+          --version-description "Updated AMI and InstanceType" \
           --launch-template-data "{
-            \"ImageId\": \"${{ env.AMI_ID }}\"
+            \"ImageId\": \"${{ env.AMI_ID }}\",
+            \"InstanceType\": \"${{ secrets.INSTANCE_TYPE }}\"
           }"
+
 
     - name: Get Latest Launch Template Version
       id: get_latest_version
