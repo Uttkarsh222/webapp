@@ -53,7 +53,7 @@ exports.createUser = async (req, res) => {
         console.log('New user created:', newUser.id);
 
         // Generate a verification token
-        const verificationToken = jwt.sign({ userId: newUser.id }, process.env.JWT_SECRET, { expiresIn: '10m' });
+        const verificationToken = jwt.sign({ userId: newUser.id }, process.env.JWT_SECRET, { expiresIn: '2m' });
 
         // Save the verification token to the database
         newUser.verificationToken = verificationToken;

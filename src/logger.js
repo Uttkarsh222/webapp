@@ -13,15 +13,21 @@ if (!fs.existsSync(logDirectory)) {
 const logger = winston.createLogger({
     level: 'info',
     transports: [
-        new winston.transports.Console(),
-        new winston.transports.File({ filename: path.join(logDirectory, 'app.log'), flags: 'a' })
-    ],
-    format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.printf(({ timestamp, level, message }) => {
-            return `${timestamp} ${level}: ${message}`;
+        new winston.transports.Console({
+            format: winston.format.combine(
+                winston.format.timestamp(),
+                winston.format.json()
+            )
+        }),
+        new winston.transports.File({ 
+            filename: path.join(logDirectory, 'app.log'), 
+            format: winston.format.combine(
+                winston.format.timestamp(),
+                winston.format.json()
+            ),
+            flags: 'a' 
         })
-    )
+    ]
 });
 
 // Initialize StatsD client
