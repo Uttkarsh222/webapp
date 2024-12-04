@@ -32,7 +32,7 @@ afterAll(async () => {
 });
 
 describe('User APIs', () => {
-    it('GET /v1/user/self - Should return user information', async () => {
+    it('GET /v2/user/self - Should return user information', async () => {
         const encodedCredentials = Buffer.from('jane.doe@example.com:skdjfhskdfjhg').toString('base64');
 
         const response = await request(app)
@@ -48,11 +48,11 @@ describe('User APIs', () => {
         }));
     });
 
-    it('PUT /v1/user/self - Should update user information', async () => {
+    it('PUT /v2/user/self - Should update user information', async () => {
         const encodedCredentials = Buffer.from('jane.doe@example.com:skdjfhskdfjhg').toString('base64');
 
         const response = await request(app)
-            .put('/v1/user/self')
+            .put('/v2/user/self')
             .set('Authorization', `Basic ${encodedCredentials}`)
             .send({
                 firstName: 'Jane Updated',
@@ -69,31 +69,31 @@ describe('User APIs', () => {
         expect(isPasswordValid).toBe(true);
     });
 
-    it('DELETE /v1/user/self - Should return 405 Method Not Allowed', async () => {
+    it('DELETE /v2/user/self - Should return 405 Method Not Allowed', async () => {
         const encodedCredentials = Buffer.from('jane.doe@example.com:skdjfhskdfjhg').toString('base64');
 
         const response = await request(app)
-            .delete('/v1/user/self')
+            .delete('/v2/user/self')
             .set('Authorization', `Basic ${encodedCredentials}`);
 
         expect(response.status).toBe(405);
     });
     
 
-    it('GET /v1/user/verify - Should return error for invalid token', async () => {
+    it('GET /v2/user/verify - Should return error for invalid token', async () => {
         const response = await request(app)
-            .get('/v1/user/verify?token=INVALID_TOKEN');
+            .get('/v2/user/verify?token=INVALID_TOKEN');
 
         expect(response.status).toBe(500); // Adjust the status code based on your implementation
     });
 
-    it('GET /v1/user/verify - Should return error for expired token', async () => {
+    it('GET /v2/user/verify - Should return error for expired token', async () => {
         const user = await User.findOne({ where: { email: 'jane.doe@example.com' } });
 
         const expiredToken = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '-1s' });
 
         const response = await request(app)
-            .get(`/v1/user/verify?token=${expiredToken}`);
+            .get(`/v2/user/verify?token=${expiredToken}`);
 
         expect(response.status).toBe(400);
         expect(response.body.message).toBe('Token has expired. Please register again.');

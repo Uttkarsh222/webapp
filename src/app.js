@@ -34,8 +34,8 @@ sequelize.addHook('afterQuery', (options) => {
 
 // Routes
 app.use('/healthz', healthRoutes);
-app.use('/v1/user/self', imageRoutes);
-app.use('/v1', userRoutes);
+app.use('/v2/user/self', imageRoutes);
+app.use('/v2', userRoutes);
 
 app.use('*', (req, res) => {
     res.status(405).send();
