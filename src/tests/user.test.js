@@ -36,7 +36,7 @@ describe('User APIs', () => {
         const encodedCredentials = Buffer.from('jane.doe@example.com:skdjfhskdfjhg').toString('base64');
 
         const response = await request(app)
-            .get('/v1/user/self')
+            .get('/v2/user/self')
             .set('Authorization', `Basic ${encodedCredentials}`);
 
         expect(response.status).toBe(200);
